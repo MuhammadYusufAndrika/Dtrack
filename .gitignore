@@ -1,0 +1,70 @@
+# --- Environment ---
+.env
+.env.local
+.env.*.local
+.env.backup
+.env.production
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- IDE / Editors ---
+.idea/
+.vscode/
+.nova/
+.zed/
+.fleet/
+*.swp
+*.swo
+
+# --- Laravel ---
+backend/node_modules
+backend/vendor
+backend/.phpunit.cache
+backend/.phpunit.result.cache
+backend/storage/*.key
+backend/storage/pail
+backend/public/build
+backend/public/hot
+backend/public/storage
+backend/bootstrap/cache/*.php
+backend/storage/framework/cache/data/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/storage/framework/testing/*
+backend/storage/logs/*
+backend/storage/app/public/*
+backend/storage/app/private/*
+!backend/storage/logs/.gitignore
+!backend/storage/framework/cache/data/.gitignore
+!backend/storage/framework/sessions/.gitignore
+!backend/storage/framework/views/.gitignore
+!backend/storage/framework/testing/.gitignore
+!backend/storage/logs/.gitignore
+!backend/storage/app/public/.gitignore
+!backend/storage/app/private/.gitignore
+
+# --- Python (AI Service) ---
+ai-service/__pycache__/
+ai-service/*.pyc
+ai-service/.venv/
+ai-service/venv/
+ai-service/env/
+ai-service/.pytest_cache/
+ai-service/*.egg-info/
+
+# --- Mobile (Android) ---
+mobile/.gradle/
+mobile/build/
+mobile/app/build/
+mobile/local.properties
+mobile/.idea/
+mobile/*.iml
+mobile/captures/
+
+# --- Docker ---
+docker-compose.override.yml
+
+# --- Misc ---
+agent.md

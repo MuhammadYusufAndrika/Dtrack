@@ -1,0 +1,60 @@
+name: fleetvision-ai
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: fleetvision-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret
+      MYSQL_DATABASE: fleetvision
+      MYSQL_USER: fleetvision
+      MYSQL_PASSWORD: fleetvision_secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secret"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: fleetvision-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: fleetvision-ai
+    depends_on:
+      - redis
+    environment:
+      BACKEND_API_URL: http://host.docker.internal:8000/api
+      REDIS_URL: redis://redis:6379/0
+      VEHICLE_ID: TRK001
+      INFERENCE_INTERVAL: "0.5"
+      CONFIDENCE_THRESHOLD: "0.5"
+      LOG_LEVEL: INFO
+    ports:
+      - "5000:5000"
+    volumes:
+      - ai_service_data:/app/models/weights
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:
+  ai_service_data:

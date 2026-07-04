@@ -1,0 +1,10 @@
+.env
+.git
+.gitignore
+node_modules/
+npm-debug.log
+.editorconfig
+.vscode/
+.phpunit.result.cache
+docker-compose.yml
+vendor/

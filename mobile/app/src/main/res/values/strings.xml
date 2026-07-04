@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FleetVision AI</string>
+
+    <!-- GPS -->
+    <string name="gps_tracking">GPS Tracking</string>
+    <string name="gps_status">Status</string>
+    <string name="gps_active">Active</string>
+    <string name="gps_inactive">Inactive</string>
+    <string name="latitude">Latitude</string>
+    <string name="longitude">Longitude</string>
+    <string name="speed">Speed</string>
+    <string name="accuracy">Accuracy</string>
+
+    <!-- Camera -->
+    <string name="camera_streaming">Camera Streaming</string>
+    <string name="camera_status">Status</string>
+    <string name="camera_streaming_active">Streaming</string>
+    <string name="camera_streaming_idle">Idle</string>
+
+    <!-- Vehicle -->
+    <string name="vehicle_info">Vehicle Info</string>
+    <string name="select_vehicle">Select Vehicle</string>
+    <string name="plate_number">Plate Number</string>
+    <string name="vehicle_id">Vehicle ID</string>
+
+    <!-- Connection -->
+    <string name="connection_status">Connection Status</string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="last_sync">Last Sync</string>
+
+    <!-- Actions -->
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+</resources>
