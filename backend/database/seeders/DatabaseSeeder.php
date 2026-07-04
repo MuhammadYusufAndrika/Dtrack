@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
 
         $drivers = collect();
         $driverData = [
-            ['name' => 'John Smith', 'email' => 'john.smith@example.com', 'phone' => '+1-555-0101', 'license_number' => 'LIC-001', 'status' => DriverStatus::AVAILABLE],
+            ['name' => 'John Smith', 'email' => 'budi@example.com', 'phone' => '+1-555-0101', 'license_number' => 'LIC-001', 'status' => DriverStatus::AVAILABLE],
             ['name' => 'Maria Garcia', 'email' => 'maria.garcia@example.com', 'phone' => '+1-555-0102', 'license_number' => 'LIC-002', 'status' => DriverStatus::DRIVING],
             ['name' => 'Ahmed Hassan', 'email' => 'ahmed.hassan@example.com', 'phone' => '+1-555-0103', 'license_number' => 'LIC-003', 'status' => DriverStatus::ON_BREAK],
             ['name' => 'Sarah Johnson', 'email' => 'sarah.johnson@example.com', 'phone' => '+1-555-0104', 'license_number' => 'LIC-004', 'status' => DriverStatus::AVAILABLE],
@@ -158,7 +158,7 @@ class DatabaseSeeder extends Seeder
 
         \App\Models\User::create([
             'name' => 'Admin',
-            'email' => 'admin@fleetvision.ai',
+            'email' => 'admin@example.com',
             'password' => bcrypt('password'),
             'role' => 'admin',
         ]);

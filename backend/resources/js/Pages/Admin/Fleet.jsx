@@ -9,11 +9,12 @@ const vehicleIcon = L.divIcon({ className: '', html: '<div style="width:28px;hei
 function Updater({ vehicles, locations }) {
     const map = useMap();
     useEffect(() => {
-        if (vehicles.length > 0) {
-            const first = vehicles.find((v) => locations[v.id]);
-            if (first && locations[first.id]) map.setView([locations[first.id].latitude, locations[first.id].longitude], 12);
+        const located = vehicles.filter((v) => locations[v.id]);
+        if (located.length > 0) {
+            const bounds = L.latLngBounds(located.map((v) => [locations[v.id].latitude, locations[v.id].longitude]));
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
         }
-    }, [vehicles.length > 0]);
+    }, [locations]);
     return null;
 }
 
@@ -56,7 +57,7 @@ export default function Fleet() {
                     <div className="lg:col-span-2">
                         <div className="h-[500px] rounded-xl overflow-hidden border border-dark-700/50">
                             <MapContainer center={[-6.2088, 106.8456]} zoom={12} className="h-full w-full z-0" zoomControl={false}>
-                                <TileLayer attribution='&copy; <a href="https://carto.com/">CARTO</a>' url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                                <TileLayer attribution='&copy; <a href="https://carto.com/">CARTO</a>' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                                 <Updater vehicles={vehicles} locations={locations} />
                                 {vehicles.map((v) => locations[v.id] && (
                                     <Marker key={v.id} position={[locations[v.id].latitude, locations[v.id].longitude]} icon={vehicleIcon}>

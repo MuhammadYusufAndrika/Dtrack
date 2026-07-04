@@ -41,7 +41,7 @@ export default function FleetShow({ id }) {
                 <div><h1 className="text-2xl font-bold text-dark-50">{vehicle.plate_number}</h1><p className="text-sm text-dark-400 mt-1">{vehicle.brand} {vehicle.model}</p></div>
                 <div className="h-[400px] rounded-xl overflow-hidden border border-dark-700/50">
                     <MapContainer center={center} zoom={15} className="h-full w-full z-0" zoomControl={false}>
-                        <TileLayer attribution='&copy; <a href="https://carto.com/">CARTO</a>' url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                        <TileLayer attribution='&copy; <a href="https://carto.com/">CARTO</a>' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                         {lastLoc && <Marker position={[lastLoc.latitude, lastLoc.longitude]} icon={vehicleIcon}><Popup><div className="text-sm text-dark-900"><p className="font-semibold">{vehicle.plate_number}</p><p>Speed: {lastLoc.speed ?? '—'} km/h</p></div></Popup></Marker>}
                     </MapContainer>
                 </div>

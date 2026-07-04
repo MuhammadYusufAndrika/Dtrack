@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import DriverLayout from '../../Layouts/DriverLayout';
 import StatCard from '../../Components/StatCard';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Truck, Route, Activity, Clock, MapPin, Navigation, Play, Square } from 'lucide-react';
 
@@ -13,6 +13,14 @@ function haversine(lat1, lon1, lat2, lon2) {
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function MapUpdater({ position }) {
+    const map = useMap();
+    useEffect(() => {
+        if (position) map.flyTo(position, map.getZoom(), { duration: 1 });
+    }, [position]);
+    return null;
 }
 
 export default function DriverDashboard() {
@@ -52,6 +60,16 @@ export default function DriverDashboard() {
                     if (ongoing) {
                         setActiveTrip(ongoing);
                         setTripState('tracking');
+                        watchId.current = navigator.geolocation.watchPosition(
+                            (p) => {
+                                const newPos = { lat: p.coords.latitude, lng: p.coords.longitude, speed: p.coords.speed ?? 0, heading: p.coords.heading ?? 0, accuracy: p.coords.accuracy ?? 0 };
+                                setGpsPos(newPos);
+                                if (lastPos.current) setDistance((prev) => prev + haversine(lastPos.current.lat, lastPos.current.lng, newPos.lat, newPos.lng));
+                                lastPos.current = { lat: newPos.lat, lng: newPos.lng };
+                            },
+                            (err) => setGpsError(`GPS error: ${err.message}`),
+                            { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+                        );
                     }
                 }
             } catch {}
@@ -212,8 +230,9 @@ export default function DriverDashboard() {
                                 {tripState === 'tracking' && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-success-400 animate-pulse" /><span className="text-xs text-success-400">Live</span></span>}
                             </div>
                             <div className="h-[400px]">
-                                <MapContainer center={[gpsPos ? gpsPos.lat : -6.2088, gpsPos ? gpsPos.lng : 106.8456]} zoom={15} className="h-full w-full z-0" zoomControl={false}>
-                                    <TileLayer attribution='&copy; <a href="https://carto.com/">CARTO</a>' url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                                <MapContainer center={[-6.2088, 106.8456]} zoom={15} className="h-full w-full z-0" zoomControl={false}>
+                                    <TileLayer attribution='&copy; <a href="https://carto.com/">CARTO</a>' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                                    {gpsPos && <MapUpdater position={[gpsPos.lat, gpsPos.lng]} />}
                                     {gpsPos && <Marker position={[gpsPos.lat, gpsPos.lng]} icon={vehicleIcon}><Popup><div className="text-sm"><p>Speed: {Math.round(gpsPos.speed * 3.6)} km/h</p></div></Popup></Marker>}
                                 </MapContainer>
                             </div>
