@@ -34,7 +34,7 @@ class VehicleRepository extends BaseRepository
 
     public function getVehiclesWithLatestLocation(): Collection
     {
-        return Vehicle::with('latestLocation')->get();
+        return Vehicle::with(['latestLocation', 'activeSession'])->get();
     }
 
     public function countActive(): int

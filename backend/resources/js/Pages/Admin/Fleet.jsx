@@ -112,11 +112,28 @@ export default function Fleet() {
         }
     }, [vehicles.length]);
 
+    // Clean up liveLocations for vehicles that no longer have an active session
+    useEffect(() => {
+        if (vehicles.length === 0) return;
+        setLiveLocations((prev) => {
+            const next = { ...prev };
+            let changed = false;
+            vehicles.forEach((v) => {
+                if (!v.is_driving && next[v.id]) {
+                    delete next[v.id];
+                    changed = true;
+                }
+            });
+            return changed ? next : prev;
+        });
+    }, [vehicles]);
+
     // Merge API vehicle data with live WebSocket locations
+    // is_live: based on backend's active driving session; liveLocations provides real-time position
     const vehiclesWithLiveLocation = useMemo(() => vehicles.map((v) => ({
         ...v,
         latest_location: liveLocations[v.id] || v.latest_location,
-        is_live: !!liveLocations[v.id],
+        is_live: v.is_driving,
     })), [vehicles, liveLocations]);
 
     const activeVehicles = vehiclesWithLiveLocation.filter((v) => v.latest_location);

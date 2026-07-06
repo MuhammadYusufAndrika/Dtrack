@@ -34,6 +34,7 @@ class VehicleResource extends JsonResource
                     'start_time' => $this->activeSession->start_time,
                 ] : null;
             }),
+            'is_driving' => $this->relationLoaded('activeSession') && $this->activeSession !== null,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
