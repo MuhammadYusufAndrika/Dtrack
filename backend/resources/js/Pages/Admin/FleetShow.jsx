@@ -8,7 +8,6 @@ const vehicleIcon = L.divIcon({ className: '', html: '<div style="width:32px;hei
 
 export default function FleetShow({ id }) {
     const [vehicle, setVehicle] = useState(null);
-    const [locations, setLocations] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -16,14 +15,9 @@ export default function FleetShow({ id }) {
             const token = localStorage.getItem('token');
             const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
             try {
-                const [vRes, lRes] = await Promise.all([
-                    fetch(`/api/vehicles/${id}`, { headers }),
-                    fetch(`/api/vehicles/${id}/locations`, { headers }),
-                ]);
+                const vRes = await fetch(`/api/vehicles/${id}`, { headers });
                 const vJson = await vRes.json();
-                const lJson = await lRes.json();
                 if (vJson.success) setVehicle(vJson.data);
-                if (lJson.success) setLocations(lJson.data);
             } catch {}
             setLoading(false);
         })();
@@ -32,8 +26,8 @@ export default function FleetShow({ id }) {
     if (loading) return <AdminLayout><PageLoader /></AdminLayout>;
     if (!vehicle) return <AdminLayout><div className="text-center py-12 text-dark-400">Vehicle not found</div></AdminLayout>;
 
-    const lastLoc = locations[locations.length - 1];
-    const center = lastLoc ? [lastLoc.latitude, lastLoc.longitude] : [-6.2088, 106.8456];
+    const loc = vehicle.latest_location;
+    const center = loc ? [loc.latitude, loc.longitude] : [-6.2088, 106.8456];
 
     return (
         <AdminLayout>
@@ -42,7 +36,7 @@ export default function FleetShow({ id }) {
                 <div className="h-[400px] rounded-xl overflow-hidden border border-dark-700/50">
                     <MapContainer center={center} zoom={15} className="h-full w-full z-0" zoomControl={false}>
                         <TileLayer attribution='&copy; <a href="https://carto.com/">CARTO</a>' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-                        {lastLoc && <Marker position={[lastLoc.latitude, lastLoc.longitude]} icon={vehicleIcon}><Popup><div className="text-sm text-dark-900"><p className="font-semibold">{vehicle.plate_number}</p><p>Speed: {lastLoc.speed ?? '—'} km/h</p></div></Popup></Marker>}
+                        {loc && <Marker position={[loc.latitude, loc.longitude]} icon={vehicleIcon}><Popup><div className="text-sm text-dark-900"><p className="font-semibold">{vehicle.plate_number}</p><p>Speed: {loc.speed ?? '—'} km/h</p></div></Popup></Marker>}
                     </MapContainer>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

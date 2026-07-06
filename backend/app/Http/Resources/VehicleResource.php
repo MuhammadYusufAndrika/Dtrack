@@ -39,11 +39,4 @@ class VehicleResource extends JsonResource
         ];
     }
 
-    public static function collection($resource)
-    {
-        return parent::collection($resource)->additional([
-            'success' => true,
-            'message' => 'Vehicles retrieved successfully.',
-        ]);
-    }
 }

@@ -58,6 +58,8 @@ class VehicleController extends Controller
             ], 404);
         }
 
+        $vehicle->load('latestLocation');
+
         return response()->json([
             'success' => true,
             'message' => 'Vehicle retrieved successfully.',

@@ -100,12 +100,12 @@ class LocationService
         }
 
         broadcast(new LocationUpdated(
-            vehicleId: $vehicleId,
-            latitude: $data['latitude'],
-            longitude: $data['longitude'],
-            speed: $data['speed'] ?? 0,
-            heading: $data['heading'] ?? 0,
-            timestamp: $timestamp->toDateTimeString(),
+            $vehicleId,
+            $data['latitude'],
+            $data['longitude'],
+            $data['speed'] ?? 0,
+            $data['heading'] ?? 0,
+            $timestamp->toDateTimeString(),
         ))->toOthers();
 
         return $location;

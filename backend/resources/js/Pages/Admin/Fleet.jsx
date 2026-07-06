@@ -4,25 +4,41 @@ import { PageLoader } from '../../Components/LoadingSpinner';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-const vehicleIcon = L.divIcon({ className: '', html: '<div style="width:28px;height:28px;background:#3b82f6;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-size:12px;">🚛</div>', iconSize: [28, 28], iconAnchor: [14, 14] });
+const vehicleIcon = L.divIcon({
+    className: '',
+    html: '<div style="width:32px;height:32px;background:#3b82f6;border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(59,130,246,0.6);font-size:14px;">🚛</div>',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+});
 
-function Updater({ vehicles, locations }) {
+const activeVehicleIcon = L.divIcon({
+    className: '',
+    html: '<div style="width:36px;height:36px;background:#22c55e;border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 16px rgba(34,197,94,0.7);font-size:15px;animation:pulse 2s infinite;">🚛</div>',
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+});
+
+function Updater({ vehicles }) {
     const map = useMap();
     useEffect(() => {
-        const located = vehicles.filter((v) => locations[v.id]);
+        const located = vehicles.filter((v) => v.latest_location);
         if (located.length > 0) {
-            const bounds = L.latLngBounds(located.map((v) => [locations[v.id].latitude, locations[v.id].longitude]));
-            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+            const bounds = L.latLngBounds(
+                located.map((v) => [v.latest_location.latitude, v.latest_location.longitude])
+            );
+            map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 });
         }
-    }, [locations]);
+    }, [vehicles]);
     return null;
 }
 
 export default function Fleet() {
     const [vehicles, setVehicles] = useState([]);
-    const [locations, setLocations] = useState({});
     const [loading, setLoading] = useState(true);
+    const [liveLocations, setLiveLocations] = useState({}); // { vehicle_id: { latitude, longitude, speed, heading, timestamp } }
+    const [wsConnected, setWsConnected] = useState(false);
     const intervalRef = useRef(null);
+    const echoChannels = useRef([]);
 
     const fetchData = useCallback(async () => {
         try {
@@ -32,48 +48,179 @@ export default function Fleet() {
             const vJson = await vRes.json();
             if (vJson.success) {
                 setVehicles(vJson.data);
-                const locs = {};
-                await Promise.all(vJson.data.map(async (v) => {
-                    try {
-                        const lRes = await fetch(`/api/vehicles/${v.id}/locations`, { headers });
-                        const lJson = await lRes.json();
-                        if (lJson.success && lJson.data.length > 0) locs[v.id] = lJson.data[lJson.data.length - 1];
-                    } catch {}
-                }));
-                setLocations({ ...locs });
+                // Seed initial live locations from API response
+                setLiveLocations((prev) => {
+                    const next = { ...prev };
+                    vJson.data.forEach((v) => {
+                        if (v.latest_location && !next[v.id]) {
+                            next[v.id] = v.latest_location;
+                        }
+                    });
+                    return next;
+                });
             }
         } catch {}
     }, []);
 
-    useEffect(() => { fetchData().finally(() => setLoading(false)); intervalRef.current = setInterval(fetchData, 10000); return () => clearInterval(intervalRef.current); }, []);
+    // Subscribe to WebSocket channels for each vehicle
+    const subscribeToVehicles = useCallback((vehicleList) => {
+        if (!window.Echo) return;
+
+        // Unsubscribe from old channels
+        echoChannels.current.forEach((ch) => window.Echo.leave(ch));
+        echoChannels.current = [];
+
+        vehicleList.forEach((vehicle) => {
+            const channelName = `vehicle.${vehicle.id}`;
+            window.Echo.channel(channelName)
+                .listen('.location.updated', (data) => {
+                    setLiveLocations((prev) => ({
+                        ...prev,
+                        [data.vehicle_id]: {
+                            latitude: data.latitude,
+                            longitude: data.longitude,
+                            speed: data.speed,
+                            heading: data.heading,
+                            timestamp: data.timestamp,
+                        },
+                    }));
+                })
+                .subscribed(() => {
+                    setWsConnected(true);
+                });
+            echoChannels.current.push(channelName);
+        });
+    }, []);
+
+    useEffect(() => {
+        fetchData().finally(() => setLoading(false));
+        intervalRef.current = setInterval(fetchData, 10000);
+        return () => {
+            clearInterval(intervalRef.current);
+            // Cleanup WebSocket channels
+            echoChannels.current.forEach((ch) => window.Echo?.leave(ch));
+        };
+    }, []);
+
+    // When vehicles load, subscribe to their WebSocket channels
+    useEffect(() => {
+        if (vehicles.length > 0) {
+            subscribeToVehicles(vehicles);
+        }
+    }, [vehicles.length]);
+
+    // Merge API vehicle data with live WebSocket locations
+    const vehiclesWithLiveLocation = vehicles.map((v) => ({
+        ...v,
+        latest_location: liveLocations[v.id] || v.latest_location,
+        is_live: !!liveLocations[v.id],
+    }));
+
+    const activeVehicles = vehiclesWithLiveLocation.filter((v) => v.latest_location);
+    const totalActive = activeVehicles.length;
 
     if (loading) return <AdminLayout><PageLoader /></AdminLayout>;
 
     return (
         <AdminLayout>
             <div className="space-y-6">
-                <div><h1 className="text-2xl font-bold text-dark-50">Fleet</h1><p className="text-sm text-dark-400 mt-1">{vehicles.length} vehicles</p></div>
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-dark-50">Fleet Live Map</h1>
+                        <p className="text-sm text-dark-400 mt-1">
+                            {vehicles.length} vehicles &mdash; {totalActive} with location
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dark-800/60 border border-dark-700/50">
+                        <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-success-400 animate-pulse' : 'bg-yellow-400'}`} />
+                        <span className="text-xs text-dark-300">{wsConnected ? 'Live' : 'Polling'}</span>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Map */}
                     <div className="lg:col-span-2">
-                        <div className="h-[500px] rounded-xl overflow-hidden border border-dark-700/50">
-                            <MapContainer center={[-6.2088, 106.8456]} zoom={12} className="h-full w-full z-0" zoomControl={false}>
-                                <TileLayer attribution='&copy; <a href="https://carto.com/">CARTO</a>' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-                                <Updater vehicles={vehicles} locations={locations} />
-                                {vehicles.map((v) => locations[v.id] && (
-                                    <Marker key={v.id} position={[locations[v.id].latitude, locations[v.id].longitude]} icon={vehicleIcon}>
-                                        <Popup><div className="text-sm text-dark-900"><p className="font-semibold">{v.plate_number}</p><p>Speed: {locations[v.id].speed ?? '—'} km/h</p></div></Popup>
-                                    </Marker>
-                                ))}
+                        <div className="h-[540px] rounded-xl overflow-hidden border border-dark-700/50 shadow-lg">
+                            <MapContainer
+                                center={[-6.2088, 106.8456]}
+                                zoom={12}
+                                className="h-full w-full z-0"
+                                zoomControl={true}
+                            >
+                                <TileLayer
+                                    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                                />
+                                <Updater vehicles={vehiclesWithLiveLocation} />
+                                {vehiclesWithLiveLocation.map((v) =>
+                                    v.latest_location ? (
+                                        <Marker
+                                            key={v.id}
+                                            position={[v.latest_location.latitude, v.latest_location.longitude]}
+                                            icon={v.is_live ? activeVehicleIcon : vehicleIcon}
+                                        >
+                                            <Popup>
+                                                <div className="text-sm text-dark-900 min-w-[140px]">
+                                                    <p className="font-bold text-base">{v.plate_number}</p>
+                                                    <p className="text-dark-600">{v.brand} {v.model}</p>
+                                                    <hr className="my-1" />
+                                                    <p>Speed: <strong>{v.latest_location.speed ?? '—'} km/h</strong></p>
+                                                    <p>Lat: {Number(v.latest_location.latitude).toFixed(6)}</p>
+                                                    <p>Lng: {Number(v.latest_location.longitude).toFixed(6)}</p>
+                                                    {v.latest_location.timestamp && (
+                                                        <p className="text-xs text-dark-400 mt-1">
+                                                            {new Date(v.latest_location.timestamp).toLocaleTimeString()}
+                                                        </p>
+                                                    )}
+                                                    <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-semibold ${v.is_live ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                        {v.is_live ? '🟢 Live' : '⏱ Last Known'}
+                                                    </span>
+                                                </div>
+                                            </Popup>
+                                        </Marker>
+                                    ) : null
+                                )}
                             </MapContainer>
                         </div>
                     </div>
-                    <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                        {vehicles.map((v) => (
-                            <div key={v.id} className="rounded-xl bg-dark-800/50 border border-dark-700/50 p-4">
-                                <p className="text-sm font-semibold text-dark-100">{v.plate_number}</p>
+
+                    {/* Vehicle List Sidebar */}
+                    <div className="space-y-3 max-h-[540px] overflow-y-auto pr-1">
+                        {vehiclesWithLiveLocation.length === 0 && (
+                            <p className="text-dark-400 text-sm text-center py-8">No vehicles found.</p>
+                        )}
+                        {vehiclesWithLiveLocation.map((v) => (
+                            <div
+                                key={v.id}
+                                className={`rounded-xl border p-4 transition-all ${
+                                    v.is_live
+                                        ? 'bg-success-500/5 border-success-500/30'
+                                        : 'bg-dark-800/50 border-dark-700/50'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between mb-1">
+                                    <p className="text-sm font-semibold text-dark-100">{v.plate_number}</p>
+                                    {v.is_live && (
+                                        <span className="flex items-center gap-1 text-xs text-success-400">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-success-400 animate-pulse" />
+                                            Live
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-xs text-dark-400">{v.brand} {v.model}</p>
-                                {locations[v.id] && <p className="text-xs text-primary-400 mt-1">{locations[v.id].speed ?? 0} km/h</p>}
-                                {!locations[v.id] && <p className="text-xs text-dark-500 mt-1">No location</p>}
+                                {v.latest_location ? (
+                                    <div className="mt-2 space-y-0.5">
+                                        <p className="text-xs text-primary-400 font-medium">
+                                            {v.latest_location.speed ?? 0} km/h
+                                        </p>
+                                        <p className="text-xs text-dark-500">
+                                            {Number(v.latest_location.latitude).toFixed(5)}, {Number(v.latest_location.longitude).toFixed(5)}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-dark-500 mt-2">No location data</p>
+                                )}
                             </div>
                         ))}
                     </div>

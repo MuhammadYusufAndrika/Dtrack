@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\VehicleStatus;
 use App\Models\Vehicle;
 use App\Repositories\VehicleRepository;
+use Illuminate\Database\Eloquent\Collection;
 
 class VehicleService
 {

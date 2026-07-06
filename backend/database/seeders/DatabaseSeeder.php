@@ -153,7 +153,7 @@ class DatabaseSeeder extends Seeder
             'severity' => \App\Enums\AlertSeverity::HIGH,
             'message' => 'Driver has been driving for 4h 0m. Exceeded maximum allowed duration.',
             'is_read' => true,
-            'read_at' => $now->copy()->subHours(1),
+            'read_at' => $now->copy()->subHours(1), 
         ]);
 
         \App\Models\User::create([
