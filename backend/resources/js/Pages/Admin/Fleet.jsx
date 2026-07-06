@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import { PageLoader } from '../../Components/LoadingSpinner';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
@@ -20,13 +20,16 @@ const activeVehicleIcon = L.divIcon({
 
 function Updater({ vehicles }) {
     const map = useMap();
+    const hasFitted = useRef(false);
     useEffect(() => {
+        if (hasFitted.current) return;
         const located = vehicles.filter((v) => v.latest_location);
         if (located.length > 0) {
             const bounds = L.latLngBounds(
                 located.map((v) => [v.latest_location.latitude, v.latest_location.longitude])
             );
             map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 });
+            hasFitted.current = true;
         }
     }, [vehicles]);
     return null;
@@ -110,11 +113,11 @@ export default function Fleet() {
     }, [vehicles.length]);
 
     // Merge API vehicle data with live WebSocket locations
-    const vehiclesWithLiveLocation = vehicles.map((v) => ({
+    const vehiclesWithLiveLocation = useMemo(() => vehicles.map((v) => ({
         ...v,
         latest_location: liveLocations[v.id] || v.latest_location,
         is_live: !!liveLocations[v.id],
-    }));
+    })), [vehicles, liveLocations]);
 
     const activeVehicles = vehiclesWithLiveLocation.filter((v) => v.latest_location);
     const totalActive = activeVehicles.length;
