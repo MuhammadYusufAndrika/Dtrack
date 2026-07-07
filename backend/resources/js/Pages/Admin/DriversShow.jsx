@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiFetch } from '../../utils/api';
 import AdminLayout from '../../Layouts/AdminLayout';
 import { PageLoader } from '../../Components/LoadingSpinner';
 import StatusBadge from '../../Components/StatusBadge';
@@ -9,10 +10,9 @@ export default function DriversShow({ id }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch(`/api/drivers/${id}`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, Accept: 'application/json' },
-        }).then((r) => r.json()).then((j) => { if (j.success) setDriver(j.data); })
-          .catch(() => {}).finally(() => setLoading(false));
+        apiFetch(`/api/drivers/${id}`)
+            .then((r) => r.json()).then((j) => { if (j.success) setDriver(j.data); })
+            .catch(() => {}).finally(() => setLoading(false));
     }, [id]);
 
     if (loading) return <AdminLayout><PageLoader /></AdminLayout>;

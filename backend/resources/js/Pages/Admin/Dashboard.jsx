@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiFetch } from '../../utils/api';
 import AdminLayout from '../../Layouts/AdminLayout';
 import StatCard from '../../Components/StatCard';
 import { PageLoader } from '../../Components/LoadingSpinner';
@@ -9,10 +10,9 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch('/api/dashboard/stats', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, Accept: 'application/json' },
-        }).then((r) => r.json()).then((j) => { if (j.success) setStats(j.data); })
-          .catch(() => {}).finally(() => setLoading(false));
+        apiFetch('/api/dashboard/stats')
+            .then((r) => r.json()).then((j) => { if (j.success) setStats(j.data); })
+            .catch(() => {}).finally(() => setLoading(false));
     }, []);
 
     if (loading) return <AdminLayout><PageLoader /></AdminLayout>;

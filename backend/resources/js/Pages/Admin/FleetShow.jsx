@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiFetch } from '../../utils/api';
 import AdminLayout from '../../Layouts/AdminLayout';
 import { PageLoader } from '../../Components/LoadingSpinner';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -12,10 +13,8 @@ export default function FleetShow({ id }) {
 
     useEffect(() => {
         (async () => {
-            const token = localStorage.getItem('token');
-            const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
             try {
-                const vRes = await fetch(`/api/vehicles/${id}`, { headers });
+                const vRes = await apiFetch(`/api/vehicles/${id}`);
                 const vJson = await vRes.json();
                 if (vJson.success) setVehicle(vJson.data);
             } catch {}

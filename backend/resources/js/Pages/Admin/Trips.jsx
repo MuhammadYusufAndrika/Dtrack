@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiFetch } from '../../utils/api';
 import AdminLayout from '../../Layouts/AdminLayout';
 import DataTable from '../../Components/DataTable';
 import StatusBadge from '../../Components/StatusBadge';
@@ -11,10 +12,9 @@ export default function Trips() {
     const [filter, setFilter] = useState('all');
 
     useEffect(() => {
-        fetch('/api/trips', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, Accept: 'application/json' },
-        }).then((r) => r.json()).then((j) => { if (j.success) setTrips(j.data); })
-          .catch(() => {}).finally(() => setLoading(false));
+        apiFetch('/api/trips')
+            .then((r) => r.json()).then((j) => { if (j.success) setTrips(j.data); })
+            .catch(() => {}).finally(() => setLoading(false));
     }, []);
 
     if (loading) return <AdminLayout><PageLoader /></AdminLayout>;

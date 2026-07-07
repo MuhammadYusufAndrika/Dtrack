@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { apiFetch } from '../../utils/api';
 import AdminLayout from '../../Layouts/AdminLayout';
 import { PageLoader } from '../../Components/LoadingSpinner';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
@@ -45,9 +46,7 @@ export default function Fleet() {
 
     const fetchData = useCallback(async () => {
         try {
-            const token = localStorage.getItem('token');
-            const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
-            const vRes = await fetch('/api/vehicles', { headers });
+            const vRes = await apiFetch('/api/vehicles');
             const vJson = await vRes.json();
             if (vJson.success) {
                 setVehicles(vJson.data);
@@ -112,14 +111,14 @@ export default function Fleet() {
         }
     }, [vehicles.length]);
 
-    // Clean up liveLocations for vehicles that no longer have an active session
+    // Clean up liveLocations for vehicles that no longer have an active session AND no API location
     useEffect(() => {
         if (vehicles.length === 0) return;
         setLiveLocations((prev) => {
             const next = { ...prev };
             let changed = false;
             vehicles.forEach((v) => {
-                if (!v.is_driving && next[v.id]) {
+                if (!v.is_driving && !v.latest_location && next[v.id]) {
                     delete next[v.id];
                     changed = true;
                 }

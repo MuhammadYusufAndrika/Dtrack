@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
 
         $drivers = collect();
         $driverData = [
-            ['name' => 'John Smith', 'email' => 'budi@example.com', 'phone' => '+1-555-0101', 'license_number' => 'LIC-001', 'status' => DriverStatus::AVAILABLE],
+            ['name' => 'John Smith', 'email' => 'budi@example.com', 'phone' => '+1-555-0101', 'license_number' => 'LIC-001', 'status' => DriverStatus::DRIVING],
             ['name' => 'Maria Garcia', 'email' => 'maria.garcia@example.com', 'phone' => '+1-555-0102', 'license_number' => 'LIC-002', 'status' => DriverStatus::DRIVING],
             ['name' => 'Ahmed Hassan', 'email' => 'ahmed.hassan@example.com', 'phone' => '+1-555-0103', 'license_number' => 'LIC-003', 'status' => DriverStatus::ON_BREAK],
             ['name' => 'Sarah Johnson', 'email' => 'sarah.johnson@example.com', 'phone' => '+1-555-0104', 'license_number' => 'LIC-004', 'status' => DriverStatus::AVAILABLE],
@@ -67,20 +67,19 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        $completedSession = DrivingSession::create([
+        $activeSession2 = DrivingSession::create([
             'vehicle_id' => $vehicles[0]->id,
             'driver_id' => $drivers[0]->id,
-            'start_time' => $now->copy()->subHours(6),
-            'end_time' => $now->copy()->subHours(2),
-            'start_latitude' => 40.7128,
-            'start_longitude' => -74.0060,
-            'current_latitude' => 40.7580,
-            'current_longitude' => -73.9855,
-            'driving_duration_seconds' => 14400,
-            'max_speed' => 102.0,
-            'average_speed' => 60.0,
-            'total_distance_km' => 240.0,
-            'is_active' => false,
+            'start_time' => $now->copy()->subHours(1),
+            'start_latitude' => -6.5703,
+            'start_longitude' => 107.8421,
+            'current_latitude' => -6.5703,
+            'current_longitude' => 107.8421,
+            'driving_duration_seconds' => 3600,
+            'max_speed' => 80.0,
+            'average_speed' => 45.0,
+            'total_distance_km' => 45.0,
+            'is_active' => true,
         ]);
 
         $locations = [
@@ -109,6 +108,18 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
+        // Location history for ABC-1234 (John Smith - active session)
+        LocationHistory::create([
+            'vehicle_id' => $vehicles[0]->id,
+            'driving_session_id' => $activeSession2->id,
+            'latitude' => -6.5703,
+            'longitude' => 107.8421,
+            'speed' => 0.0,
+            'heading' => 0.0,
+            'accuracy' => 5.0,
+            'timestamp' => $now->copy()->subMinutes(30),
+        ]);
+
         Trip::create([
             'vehicle_id' => $vehicles[1]->id,
             'driver_id' => $drivers[1]->id,
@@ -122,14 +133,11 @@ class DatabaseSeeder extends Seeder
         Trip::create([
             'vehicle_id' => $vehicles[0]->id,
             'driver_id' => $drivers[0]->id,
-            'start_time' => $now->copy()->subHours(6),
-            'end_time' => $now->copy()->subHours(2),
-            'start_latitude' => 40.7128,
-            'start_longitude' => -74.0060,
-            'end_latitude' => 40.7580,
-            'end_longitude' => -73.9855,
-            'total_distance_km' => 240.0,
-            'status' => 'COMPLETED',
+            'start_time' => $now->copy()->subHours(1),
+            'start_latitude' => -6.5703,
+            'start_longitude' => 107.8421,
+            'total_distance_km' => 45.0,
+            'status' => 'IN_PROGRESS',
         ]);
 
         Alert::create([
@@ -148,12 +156,11 @@ class DatabaseSeeder extends Seeder
         Alert::create([
             'vehicle_id' => $vehicles[0]->id,
             'driver_id' => $drivers[0]->id,
-            'driving_session_id' => $completedSession->id,
+            'driving_session_id' => $activeSession2->id,
             'type' => \App\Enums\AlertType::DRIVING_TIME,
             'severity' => \App\Enums\AlertSeverity::HIGH,
-            'message' => 'Driver has been driving for 4h 0m. Exceeded maximum allowed duration.',
-            'is_read' => true,
-            'read_at' => $now->copy()->subHours(1), 
+            'message' => 'Driver has been driving for 1h 0m.',
+            'is_read' => false,
         ]);
 
         \App\Models\User::create([

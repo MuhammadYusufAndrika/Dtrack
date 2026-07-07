@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiFetch } from '../../utils/api';
 import AdminLayout from '../../Layouts/AdminLayout';
 import DataTable from '../../Components/DataTable';
 import StatusBadge from '../../Components/StatusBadge';
@@ -11,20 +12,16 @@ export default function Alerts() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch('/api/alerts', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, Accept: 'application/json' },
-        }).then((r) => r.json()).then((j) => { if (j.success) setAlerts(j.data); })
-          .catch(() => {}).finally(() => setLoading(false));
+        apiFetch('/api/alerts')
+            .then((r) => r.json()).then((j) => { if (j.success) setAlerts(j.data); })
+            .catch(() => {}).finally(() => setLoading(false));
     }, []);
 
     if (loading) return <AdminLayout><PageLoader /></AdminLayout>;
 
     const markRead = async (id) => {
         try {
-            await fetch(`/api/alerts/${id}/read`, {
-                method: 'PATCH',
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, Accept: 'application/json' },
-            });
+            await apiFetch(`/api/alerts/${id}/read`, { method: 'PATCH' });
             setAlerts((prev) => prev.map((a) => a.id === id ? { ...a, is_read: true } : a));
         } catch {}
     };

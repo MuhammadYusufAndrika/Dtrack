@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '../../utils/api';
 import { Link } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import DataTable from '../../Components/DataTable';
@@ -10,12 +11,17 @@ export default function Drivers() {
     const [drivers, setDrivers] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetch('/api/drivers', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, Accept: 'application/json' },
-        }).then((r) => r.json()).then((j) => { if (j.success) setDrivers(j.data); })
-          .catch(() => {}).finally(() => setLoading(false));
+    const fetchDrivers = useCallback(() => {
+        apiFetch('/api/drivers')
+            .then((r) => r.json()).then((j) => { if (j.success) setDrivers(j.data); })
+            .catch(() => {}).finally(() => setLoading(false));
     }, []);
+
+    useEffect(() => {
+        fetchDrivers();
+        const interval = setInterval(fetchDrivers, 10000);
+        return () => clearInterval(interval);
+    }, [fetchDrivers]);
 
     if (loading) return <AdminLayout><PageLoader /></AdminLayout>;
 
