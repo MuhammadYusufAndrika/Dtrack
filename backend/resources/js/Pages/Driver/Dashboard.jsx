@@ -56,7 +56,7 @@ export default function DriverDashboard() {
                 if (myDriver) {
                     const tRes = await fetch('/api/trips', { headers });
                     const tJson = await tRes.json();
-                    const ongoing = tJson.data?.find((t) => t.driver_id === myDriver.id && t.status === 'ACTIVE');
+                    const ongoing = tJson.data?.find((t) => t.driver_id === myDriver.id && t.status === 'IN_PROGRESS');
                     if (ongoing) {
                         setActiveTrip(ongoing);
                         setTripState('tracking');
@@ -119,7 +119,16 @@ export default function DriverDashboard() {
             });
             const tripJson = await tripRes.json();
             if (!tripJson.success) { setGpsError(tripJson.message); setTripState('idle'); return; }
-            setActiveTrip(tripJson.data);
+
+            // Start the trip — this creates the DrivingSession on the backend,
+            // which makes is_driving=true so the admin Live status appears.
+            const startRes = await fetch(`/api/trips/${tripJson.data.id}`, {
+                method: 'PATCH', headers,
+                body: JSON.stringify({ action: 'start' }),
+            });
+            const startJson = await startRes.json();
+            if (!startJson.success) { setGpsError(startJson.message); setTripState('idle'); return; }
+            setActiveTrip(startJson.data);
 
             watchId.current = navigator.geolocation.watchPosition(
                 (p) => {

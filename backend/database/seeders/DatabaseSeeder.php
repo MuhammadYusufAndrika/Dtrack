@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             ['plate_number' => 'MNO-7890', 'vehicle_id' => 'TRK005', 'brand' => 'DAF', 'model' => 'XF', 'year' => 2022, 'type' => 'truck', 'status' => VehicleStatus::INACTIVE],
         ];
 
+        
         foreach ($vehicleData as $data) {
             $vehicles->push(Vehicle::create($data));
         }
@@ -67,6 +68,7 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        
         $activeSession2 = DrivingSession::create([
             'vehicle_id' => $vehicles[0]->id,
             'driver_id' => $drivers[0]->id,
@@ -165,7 +167,7 @@ class DatabaseSeeder extends Seeder
 
         \App\Models\User::create([
             'name' => 'Admin',
-            'email' => 'admin@example.com',
+            'email' => '',
             'password' => bcrypt('password'),
             'role' => 'admin',
         ]);

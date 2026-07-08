@@ -54,7 +54,9 @@ export default function Fleet() {
                 setLiveLocations((prev) => {
                     const next = { ...prev };
                     vJson.data.forEach((v) => {
-                        if (v.latest_location && !next[v.id]) {
+                        // Always refresh from API if vehicle is actively driving,
+                        // or seed initial position if no entry exists yet.
+                        if (v.latest_location && (v.is_driving || !next[v.id])) {
                             next[v.id] = v.latest_location;
                         }
                     });

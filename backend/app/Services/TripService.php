@@ -32,8 +32,8 @@ class TripService
         return DB::transaction(function () use ($id) {
             $trip = $this->tripRepository->findOrFail($id);
 
-            if ($trip->status !== 'PLANNED') {
-                throw new \RuntimeException('Trip can only be started from PLANNED status.');
+            if ($trip->status === 'IN_PROGRESS') {
+                throw new \RuntimeException('Trip is already in progress.');
             }
 
             $trip->update([
@@ -41,6 +41,10 @@ class TripService
                 'start_time' => Carbon::now(),
                 'start_latitude' => $trip->start_latitude,
                 'start_longitude' => $trip->start_longitude,
+                'end_time' => null,
+                'end_latitude' => null,
+                'end_longitude' => null,
+                'total_distance_km' => 0,
             ]);
 
             $this->drivingSessionService->startSession([

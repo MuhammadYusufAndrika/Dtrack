@@ -47,10 +47,10 @@ export default function Trips() {
                 <div className="flex items-center justify-between">
                     <div><h1 className="text-2xl font-bold text-dark-50">Trips</h1><p className="text-sm text-dark-400 mt-1">{trips.length} total</p></div>
                     <div className="flex rounded-lg border border-dark-700 overflow-hidden">
-                        {['all', 'ACTIVE', 'COMPLETED', 'CANCELLED'].map((s) => (
+                        {['all', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].map((s) => (
                             <button key={s} onClick={() => setFilter(s)}
                                 className={`px-3 py-1.5 text-xs font-medium transition-colors ${filter === s ? 'bg-primary-600 text-white' : 'bg-dark-800 text-dark-400 hover:text-dark-200'}`}>
-                                {s === 'all' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
+                                {s === 'all' ? 'All' : s === 'IN_PROGRESS' ? 'Active' : s.charAt(0) + s.slice(1).toLowerCase()}
                             </button>
                         ))}
                     </div>
