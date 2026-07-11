@@ -14,8 +14,10 @@ Route::get('/admin/trips', fn () => Inertia::render('Admin/Trips'))->name('admin
 Route::get('/admin/alerts', fn () => Inertia::render('Admin/Alerts'))->name('admin.alerts');
 Route::get('/admin/settings', fn () => Inertia::render('Admin/Settings'))->name('admin.settings');
 
+Route::get('/track', fn () => Inertia::render('Customer/Track'))->name('customer.track');
+
 Route::get('/driver', fn () => Inertia::render('Driver/Dashboard'))->name('driver.dashboard');
 Route::get('/driver/trips', fn () => Inertia::render('Driver/Trips'))->name('driver.trips');
 Route::get('/driver/alerts', fn () => Inertia::render('Driver/Alerts'))->name('driver.alerts');
 
-Route::get('/', fn () => redirect('/login'));
+Route::get('/', fn () => redirect('/track'));
