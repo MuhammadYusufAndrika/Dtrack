@@ -12,10 +12,12 @@ object NotificationHelper {
 
     private const val CHANNEL_GPS = "fleetvision_gps"
     private const val CHANNEL_CAMERA = "fleetvision_camera"
+    private const val CHANNEL_TRIP = "fleetvision_trip"
     private const val CHANNEL_GENERAL = "fleetvision_general"
 
     const val NOTIFICATION_ID_GPS = 1001
     const val NOTIFICATION_ID_CAMERA = 1002
+    const val NOTIFICATION_ID_TRIP = 1003
 
     fun createChannels(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -38,6 +40,15 @@ object NotificationHelper {
             setShowBadge(false)
         }
 
+        val tripChannel = NotificationChannel(
+            CHANNEL_TRIP,
+            "Trip Status",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Shows when a trip is in progress"
+            setShowBadge(false)
+        }
+
         val generalChannel = NotificationChannel(
             CHANNEL_GENERAL,
             "FleetVision AI",
@@ -48,6 +59,7 @@ object NotificationHelper {
 
         manager.createNotificationChannel(gpsChannel)
         manager.createNotificationChannel(cameraChannel)
+        manager.createNotificationChannel(tripChannel)
         manager.createNotificationChannel(generalChannel)
     }
 
@@ -83,6 +95,31 @@ object NotificationHelper {
             .setContentTitle("FleetVision AI")
             .setContentText("Camera streaming active")
             .setSmallIcon(android.R.drawable.ic_menu_camera)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+    }
+
+    fun buildTripNotification(context: Context, duration: String = ""): Notification {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val text = if (duration.isNotEmpty()) {
+            "Trip in progress — $duration"
+        } else {
+            "Trip in progress"
+        }
+
+        return NotificationCompat.Builder(context, CHANNEL_TRIP)
+            .setContentTitle("FleetVision AI")
+            .setContentText(text)
+            .setSmallIcon(android.R.drawable.ic_menu_recent_history)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)

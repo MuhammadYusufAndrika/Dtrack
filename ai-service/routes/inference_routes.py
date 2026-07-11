@@ -1,11 +1,12 @@
 import base64
 import cv2
 import numpy as np
+import threading
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict
 
 from fastapi import APIRouter, UploadFile, File, WebSocket, WebSocketDisconnect, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from models.inference_result import InferenceResult
 from utils.logger import setup_logger
@@ -19,6 +20,10 @@ detection_service = None
 stream_service = None
 start_time = datetime.utcnow()
 
+# Frame storage: { vehicle_id: { "frame": jpeg_bytes, "timestamp": datetime, "result": dict } }
+_frame_store: Dict[str, dict] = {}
+_frame_lock = threading.Lock()
+
 
 def set_services(ds, ss=None):
     """Dependency injection: set service instances from the main app."""
@@ -27,19 +32,26 @@ def set_services(ds, ss=None):
     stream_service = ss
 
 
+def _store_frame(vehicle_id: str, frame: np.ndarray, result=None):
+    """Store the latest frame for a vehicle as JPEG bytes."""
+    try:
+        _, jpeg_buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+        jpeg_bytes = jpeg_buffer.tobytes()
+        with _frame_lock:
+            _frame_store[vehicle_id] = {
+                "frame": jpeg_bytes,
+                "timestamp": datetime.utcnow(),
+                "result": result.model_dump(mode="json") if result else None,
+            }
+    except Exception as e:
+        logger.error(f"Failed to store frame for {vehicle_id}: {e}")
+
+
 @router.post("")
-async def run_inference(file: UploadFile = File(...)) -> JSONResponse:
+async def run_inference(file: UploadFile = File(...), vehicle_id: str = "") -> JSONResponse:
     """
     Accept an image upload and run all AI detectors on it.
-
-    The image is decoded from the uploaded file, processed through the
-    detection pipeline, and the complete InferenceResult is returned as JSON.
-
-    Args:
-        file: Uploaded image file (jpg, png, etc.)
-
-    Returns:
-        JSON with inference results
+    Stores the frame for admin live view.
     """
     if detection_service is None:
         return JSONResponse(
@@ -59,6 +71,10 @@ async def run_inference(file: UploadFile = File(...)) -> JSONResponse:
             )
 
         result = detection_service.process_frame(frame)
+
+        if vehicle_id:
+            _store_frame(vehicle_id, frame, result)
+
         return JSONResponse(
             content=result.model_dump(mode="json"),
             status_code=200,
@@ -74,15 +90,7 @@ async def run_inference(file: UploadFile = File(...)) -> JSONResponse:
 
 @router.get("/health")
 async def health_check() -> JSONResponse:
-    """
-    Health check endpoint.
-
-    Returns service status including uptime, detector availability,
-    and communication stats.
-
-    Returns:
-        JSON with health status
-    """
+    """Health check endpoint."""
     uptime = (datetime.utcnow() - start_time).total_seconds()
     return JSONResponse(content={
         "status": "healthy" if detection_service is not None else "degraded",
@@ -103,14 +111,11 @@ async def inference_websocket(websocket: WebSocket):
     """
     WebSocket endpoint for streaming real-time inference results.
 
-    Accepts base64-encoded JPEG frames sent by the client, runs them
-    through the detection pipeline, and returns JSON results.
+    Accepts JSON messages with base64-encoded JPEG frames.
+    Stores frames for admin live view.
 
-    Message format (client -> server):
-        { "frame": "<base64_encoded_jpeg>" }
-
-    Response format (server -> client):
-        { "result": { ... InferenceResult fields ... } }
+    Message format: { "frame": "<base64>", "vehicle_id": "<id>" }
+    Response format: { "result": { ... } }
     """
     await websocket.accept()
     logger.info("WebSocket client connected")
@@ -124,6 +129,7 @@ async def inference_websocket(websocket: WebSocket):
         while True:
             data = await websocket.receive_json()
             frame_b64 = data.get("frame", "")
+            vehicle_id = data.get("vehicle_id", "unknown")
 
             if not frame_b64:
                 await websocket.send_json({"error": "No frame data"})
@@ -139,6 +145,9 @@ async def inference_websocket(websocket: WebSocket):
                     continue
 
                 result = detection_service.process_frame(frame)
+
+                _store_frame(vehicle_id, frame, result)
+
                 await websocket.send_json({
                     "result": result.model_dump(mode="json"),
                 })
@@ -158,15 +167,55 @@ async def inference_websocket(websocket: WebSocket):
             pass
 
 
+@router.get("/frame/{vehicle_id}")
+async def get_vehicle_frame(vehicle_id: str):
+    """Get the latest camera frame for a specific vehicle as JPEG image."""
+    with _frame_lock:
+        entry = _frame_store.get(vehicle_id)
+
+    if entry is None:
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"No frame available for vehicle {vehicle_id}"},
+        )
+
+    age_seconds = (datetime.utcnow() - entry["timestamp"]).total_seconds()
+    if age_seconds > 30:
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"Frame for {vehicle_id} is stale ({int(age_seconds)}s old)"},
+        )
+
+    return StreamingResponse(
+        iter([entry["frame"]]),
+        media_type="image/jpeg",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "X-Vehicle-ID": vehicle_id,
+            "X-Timestamp": entry["timestamp"].isoformat(),
+        },
+    )
+
+
+@router.get("/frames")
+async def list_active_frames():
+    """List all vehicles with available frames and their latest AI results."""
+    with _frame_lock:
+        frames = {}
+        for vid, entry in _frame_store.items():
+            age = (datetime.utcnow() - entry["timestamp"]).total_seconds()
+            if age < 30:
+                frames[vid] = {
+                    "timestamp": entry["timestamp"].isoformat(),
+                    "age_seconds": round(age, 1),
+                    "result": entry["result"],
+                }
+    return JSONResponse(content={"vehicles": frames})
+
+
 @router.get("/status")
 async def service_status() -> JSONResponse:
-    """
-    Get comprehensive service status including uptime, loaded models,
-    and communication statistics.
-
-    Returns:
-        JSON with detailed service status
-    """
+    """Get comprehensive service status."""
     uptime = (datetime.utcnow() - start_time).total_seconds()
     stream_props = {}
     if stream_service is not None:
@@ -174,6 +223,12 @@ async def service_status() -> JSONResponse:
             stream_props = stream_service.get_properties()
         except Exception:
             pass
+
+    with _frame_lock:
+        active_vehicles = [
+            vid for vid, entry in _frame_store.items()
+            if (datetime.utcnow() - entry["timestamp"]).total_seconds() < 30
+        ]
 
     return JSONResponse(content={
         "service": "FleetVision AI Service",
@@ -186,10 +241,6 @@ async def service_status() -> JSONResponse:
             else []
         ),
         "stream": stream_props,
-        "vehicle_id": (
-            detection_service._empty_result().vehicle_id
-            if detection_service
-            else "unknown"
-        ),
+        "active_vehicles": active_vehicles,
         "timestamp": datetime.utcnow().isoformat(),
     })

@@ -5,7 +5,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     BACKEND_API_URL: str = "http://localhost:8000/api"
     BACKEND_API_KEY: str = ""
-    STREAM_SOURCE: str = "0"
+    STREAM_SOURCE: str = "none"
     VEHICLE_ID: str = "TRK001"
     INFERENCE_INTERVAL: float = 0.5
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -18,7 +18,6 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 
-@lru_cache()
 def get_settings() -> Settings:
     return Settings()
 

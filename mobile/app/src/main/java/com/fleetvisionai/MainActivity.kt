@@ -5,7 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.widget.ArrayAdapter
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -17,13 +17,12 @@ import com.fleetvisionai.camera.CameraPreview
 import com.fleetvisionai.camera.CameraStreamer
 import com.fleetvisionai.gps.GpsRepository
 import com.fleetvisionai.gps.GpsTracker
+import com.fleetvisionai.models.DriverInfo
 import com.fleetvisionai.models.VehicleInfo
 import com.google.android.gms.location.LocationServices
-import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textview.MaterialTextView
-import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -33,8 +32,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cameraStreamer: CameraStreamer
     private lateinit var cameraPreview: CameraPreview
 
-    private lateinit var switchGps: SwitchMaterial
-    private lateinit var switchCamera: SwitchMaterial
+    private lateinit var btnStartTrip: MaterialButton
+    private lateinit var tvTripStatus: MaterialTextView
+    private lateinit var tvTripInfo: MaterialTextView
     private lateinit var tvGpsStatus: MaterialTextView
     private lateinit var tvLatitude: MaterialTextView
     private lateinit var tvLongitude: MaterialTextView
@@ -45,14 +45,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var previewView: PreviewView
     private lateinit var tvPlateNumber: MaterialTextView
     private lateinit var tvCameraStatus: MaterialTextView
-    private lateinit var cardGps: MaterialCardView
-    private lateinit var cardCamera: MaterialCardView
-    private lateinit var cardVehicle: MaterialCardView
+    private lateinit var tvAiStatus: MaterialTextView
+    private lateinit var indicatorAi: View
+    private lateinit var cardTrip: MaterialCardView
 
     private var vehicleList = listOf<VehicleInfo>()
     private var selectedVehicleId: String = "unknown"
-    private var isGpsActive = false
-    private var isCameraActive = false
+    private var driverInfo: DriverInfo? = null
+    private var currentTripId: Int? = null
+    private var isTripActive = false
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -73,12 +74,13 @@ class MainActivity : AppCompatActivity() {
         initializeTrackers()
         setupClickListeners()
         checkAndRequestPermissions()
-        loadVehicles()
+        restoreSession()
     }
 
     private fun initializeViews() {
-        switchGps = findViewById(R.id.switch_gps)
-        switchCamera = findViewById(R.id.switch_camera)
+        btnStartTrip = findViewById(R.id.btn_start_trip)
+        tvTripStatus = findViewById(R.id.tv_trip_status)
+        tvTripInfo = findViewById(R.id.tv_trip_info)
         tvGpsStatus = findViewById(R.id.tv_gps_status)
         tvLatitude = findViewById(R.id.tv_latitude)
         tvLongitude = findViewById(R.id.tv_longitude)
@@ -89,9 +91,9 @@ class MainActivity : AppCompatActivity() {
         previewView = findViewById(R.id.preview_view)
         tvPlateNumber = findViewById(R.id.tv_plate_number)
         tvCameraStatus = findViewById(R.id.tv_camera_status)
-        cardGps = findViewById(R.id.card_gps)
-        cardCamera = findViewById(R.id.card_camera)
-        cardVehicle = findViewById(R.id.card_vehicle)
+        tvAiStatus = findViewById(R.id.tv_ai_status)
+        indicatorAi = findViewById(R.id.indicator_ai)
+        cardTrip = findViewById(R.id.card_trip)
     }
 
     private fun initializeTrackers() {
@@ -110,14 +112,16 @@ class MainActivity : AppCompatActivity() {
                 tvLongitude.text = String.format("%.6f", update.longitude)
                 tvSpeed.text = String.format("%.1f km/h", update.speedKmh)
                 tvAccuracy.text = String.format("%.1f m", update.accuracy)
-                tvGpsStatus.text = "Active"
+                tvGpsStatus.text = getString(R.string.gps_active)
+                tvGpsStatus.setTextColor(getColor(R.color.status_active))
             }
             gpsRepository.queueLocation(update)
         }
 
         gpsRepository.onSendSuccess = { count ->
             runOnUiThread {
-                tvConnectionStatus.text = "Connected"
+                tvConnectionStatus.text = getString(R.string.connected)
+                tvConnectionStatus.setTextColor(getColor(R.color.status_connected))
                 tvLastSync.text = java.text.SimpleDateFormat(
                     "HH:mm:ss", java.util.Locale.getDefault()
                 ).format(java.util.Date())
@@ -126,37 +130,41 @@ class MainActivity : AppCompatActivity() {
 
         gpsRepository.onSendError = { error ->
             runOnUiThread {
-                tvConnectionStatus.text = "Disconnected"
+                tvConnectionStatus.text = getString(R.string.disconnected)
+                tvConnectionStatus.setTextColor(getColor(R.color.status_disconnected))
             }
         }
 
         cameraStreamer.onStreamingStatus = { active ->
             runOnUiThread {
-                tvCameraStatus.text = if (active) "Streaming" else "Idle"
+                tvCameraStatus.text = if (active) getString(R.string.camera_streaming_active) else getString(R.string.camera_streaming_idle)
+                tvCameraStatus.setTextColor(getColor(if (active) R.color.status_active else R.color.status_inactive))
+                tvAiStatus.text = if (active) getString(R.string.ai_active) else getString(R.id.ai_idle)
+                tvAiStatus.setTextColor(getColor(if (active) R.color.status_active else R.color.status_inactive))
+                indicatorAi.setBackgroundResource(
+                    if (active) R.drawable.circle_indicator_connected
+                    else R.drawable.circle_indicator_disconnected
+                )
             }
         }
     }
 
     private fun setupClickListeners() {
-        switchGps.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                startGpsTracking()
+        btnStartTrip.setOnClickListener {
+            if (isTripActive) {
+                handleEndTrip()
             } else {
-                stopGpsTracking()
+                handleStartTrip()
             }
         }
 
-        switchCamera.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                startCameraStreaming()
-            } else {
-                stopCameraStreaming()
-            }
-        }
-
-        findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_select_vehicle)
+        findViewById<MaterialButton>(R.id.btn_select_vehicle)
             .setOnClickListener {
-                showVehicleSelector()
+                if (!isTripActive) {
+                    showVehicleSelector()
+                } else {
+                    Toast.makeText(this, "Cannot change vehicle during an active trip", Toast.LENGTH_SHORT).show()
+                }
             }
     }
 
@@ -192,79 +200,267 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onPermissionsGranted() {
-        Toast.makeText(this, "All permissions granted", Toast.LENGTH_SHORT).show()
+        loadDriverAndVehicles()
     }
 
-    private fun startGpsTracking() {
+    private fun restoreSession() {
+        val app = FleetVisionApp.instance
+        val savedTripId = app.getActiveTripId()
+
+        if (savedTripId != null && app.isLoggedIn()) {
+            currentTripId = savedTripId
+            selectedVehicleId = app.getActiveVehicleId() ?: "unknown"
+            isTripActive = true
+            updateUiForActiveTrip()
+
+            lifecycleScope.launch {
+                try {
+                    val response = RetrofitClient.apiService.getTrip(savedTripId)
+                    if (response.success && response.data != null && response.data.status == "IN_PROGRESS") {
+                        startGpsTracking()
+                        startCameraStreaming()
+                    } else {
+                        endTripCleanup()
+                    }
+                } catch (e: Exception) {
+                    startGpsTracking()
+                    startCameraStreaming()
+                }
+            }
+        }
+    }
+
+    private fun loadDriverAndVehicles() {
+        lifecycleScope.launch {
+            try {
+                val vehiclesResponse = RetrofitClient.apiService.getVehicles()
+                if (vehiclesResponse.success && vehiclesResponse.data != null) {
+                    vehicleList = vehiclesResponse.data
+                    if (vehicleList.isNotEmpty() && selectedVehicleId == "unknown") {
+                        selectedVehicleId = vehicleList.first().vehicleId
+                        tvPlateNumber.text = vehicleList.first().plateNumber
+                    }
+                }
+
+                val driversResponse = RetrofitClient.apiService.getDrivers()
+                if (driversResponse.success && driversResponse.data != null) {
+                    val email = FleetVisionApp.instance.getUserEmail()
+                    driverInfo = driversResponse.data.find { it.email == email }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Failed to load data", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun handleStartTrip() {
         if (selectedVehicleId == "unknown") {
             Toast.makeText(this, "Please select a vehicle first", Toast.LENGTH_SHORT).show()
-            switchGps.isChecked = false
             return
         }
 
+        if (driverInfo == null) {
+            Toast.makeText(this, "Driver profile not found", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val driverId = driverInfo!!.id
+        val vehicleIdInt = vehicleList.find { it.vehicleId == selectedVehicleId }?.id
+
+        if (vehicleIdInt == null) {
+            Toast.makeText(this, "Invalid vehicle selected", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        setTripLoading(true)
+
+        lifecycleScope.launch {
+            try {
+                val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this@MainActivity)
+                @Suppress("MissingPermission")
+                val location = fusedLocationClient.getCurrentLocation(
+                    com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
+                    null
+                )
+
+                val lat = location?.latitude ?: 0.0
+                val lng = location?.longitude ?: 0.0
+
+                val createResponse = RetrofitClient.apiService.createTrip(
+                    mapOf(
+                        "vehicle_id" to vehicleIdInt,
+                        "driver_id" to driverId,
+                        "start_latitude" to lat,
+                        "start_longitude" to lng
+                    )
+                )
+
+                if (!createResponse.success || createResponse.data == null) {
+                    Toast.makeText(this@MainActivity, "Failed to create trip: ${createResponse.message}", Toast.LENGTH_SHORT).show()
+                    setTripLoading(false)
+                    return@launch
+                }
+
+                val tripId = createResponse.data.id
+
+                val startResponse = RetrofitClient.apiService.updateTrip(
+                    tripId,
+                    mapOf("action" to "start")
+                )
+
+                if (!startResponse.success) {
+                    Toast.makeText(this@MainActivity, "Failed to start trip: ${startResponse.message}", Toast.LENGTH_SHORT).show()
+                    setTripLoading(false)
+                    return@launch
+                }
+
+                currentTripId = tripId
+                isTripActive = true
+
+                FleetVisionApp.instance.saveActiveTrip(tripId, selectedVehicleId, driverId)
+
+                startGpsTracking()
+                startCameraStreaming()
+                updateUiForActiveTrip()
+
+                Toast.makeText(this@MainActivity, "Trip started", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                setTripLoading(false)
+            }
+        }
+    }
+
+    private fun handleEndTrip() {
+        val tripId = currentTripId ?: return
+
+        setTripLoading(true)
+
+        lifecycleScope.launch {
+            try {
+                val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this@MainActivity)
+                @Suppress("MissingPermission")
+                val location = fusedLocationClient.getCurrentLocation(
+                    com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
+                    null
+                )
+
+                val lat = location?.latitude ?: 0.0
+                val lng = location?.longitude ?: 0.0
+
+                val response = RetrofitClient.apiService.updateTrip(
+                    tripId,
+                    mapOf(
+                        "action" to "end",
+                        "end_latitude" to lat,
+                        "end_longitude" to lng
+                    )
+                )
+
+                if (response.success) {
+                    endTripCleanup()
+                    Toast.makeText(this@MainActivity, "Trip ended", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@MainActivity, "Failed to end trip: ${response.message}", Toast.LENGTH_SHORT).show()
+                    setTripLoading(false)
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                setTripLoading(false)
+            }
+        }
+    }
+
+    private fun endTripCleanup() {
+        currentTripId = null
+        isTripActive = false
+        FleetVisionApp.instance.clearActiveTrip()
+
+        stopCameraStreaming()
+        stopGpsTracking()
+        updateUiForIdleTrip()
+    }
+
+    private fun startGpsTracking() {
         try {
             gpsTracker.startTracking()
             gpsRepository.startAutoFlush()
-            isGpsActive = true
 
             val serviceIntent = Intent(this, GpsTrackingService::class.java).apply {
                 putExtra(GpsTrackingService.EXTRA_VEHICLE_ID, selectedVehicleId)
-                putExtra(GpsTrackingService.EXTRA_TIMEOUT_MINUTES, 30L)
+                putExtra(GpsTrackingService.EXTRA_TIMEOUT_MINUTES, 120L)
             }
             ContextCompat.startForegroundService(this, serviceIntent)
 
-            Toast.makeText(this, "GPS tracking started", Toast.LENGTH_SHORT).show()
+            tvGpsStatus.text = getString(R.string.gps_active)
+            tvGpsStatus.setTextColor(getColor(R.color.status_active))
         } catch (e: SecurityException) {
             Toast.makeText(this, "Location permission required", Toast.LENGTH_LONG).show()
-            switchGps.isChecked = false
         }
     }
 
     private fun stopGpsTracking() {
         gpsTracker.stopTracking()
         gpsRepository.stopAutoFlush()
-        isGpsActive = false
-        tvGpsStatus.text = "Inactive"
+        tvGpsStatus.text = getString(R.string.gps_inactive)
+        tvGpsStatus.setTextColor(getColor(R.color.status_inactive))
         stopService(Intent(this, GpsTrackingService::class.java))
-        Toast.makeText(this, "GPS tracking stopped", Toast.LENGTH_SHORT).show()
     }
 
     private fun startCameraStreaming() {
-        if (selectedVehicleId == "unknown") {
-            Toast.makeText(this, "Please select a vehicle first", Toast.LENGTH_SHORT).show()
-            switchCamera.isChecked = false
-            return
-        }
-
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
             != PackageManager.PERMISSION_GRANTED
         ) {
-            Toast.makeText(this, "Camera permission required", Toast.LENGTH_LONG).show()
-            switchCamera.isChecked = false
+            Toast.makeText(this, "Camera permission required for AI monitoring", Toast.LENGTH_LONG).show()
             return
         }
 
-        isCameraActive = true
         cameraStreamer.startStreaming()
         cameraPreview.start()
-        previewView.visibility = android.view.View.VISIBLE
+        previewView.visibility = View.VISIBLE
 
         val serviceIntent = Intent(this, CameraStreamingService::class.java).apply {
             putExtra(CameraStreamingService.EXTRA_VEHICLE_ID, selectedVehicleId)
         }
         ContextCompat.startForegroundService(this, serviceIntent)
-
-        Toast.makeText(this, "Camera streaming started", Toast.LENGTH_SHORT).show()
     }
 
     private fun stopCameraStreaming() {
         cameraStreamer.stopStreaming()
         cameraPreview.stop()
-        isCameraActive = false
-        previewView.visibility = android.view.View.GONE
-        tvCameraStatus.text = "Idle"
+        previewView.visibility = View.GONE
+        tvCameraStatus.text = getString(R.string.camera_streaming_idle)
+        tvCameraStatus.setTextColor(getColor(R.color.status_inactive))
+        tvAiStatus.text = getString(R.string.ai_idle)
+        tvAiStatus.setTextColor(getColor(R.color.status_inactive))
+        indicatorAi.setBackgroundResource(R.drawable.circle_indicator_disconnected)
         stopService(Intent(this, CameraStreamingService::class.java))
-        Toast.makeText(this, "Camera streaming stopped", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun updateUiForActiveTrip() {
+        btnStartTrip.text = getString(R.string.end_trip)
+        btnStartTrip.setBackgroundColor(getColor(R.color.error))
+        tvTripStatus.text = getString(R.string.trip_in_progress)
+        tvTripStatus.setTextColor(getColor(R.color.status_active))
+        tvTripInfo.visibility = View.VISIBLE
+        tvTripInfo.text = "Vehicle: $selectedVehicleId"
+    }
+
+    private fun updateUiForIdleTrip() {
+        btnStartTrip.text = getString(R.string.start_trip)
+        btnStartTrip.setBackgroundColor(getColor(R.color.secondary))
+        tvTripStatus.text = getString(R.string.no_active_trip)
+        tvTripStatus.setTextColor(getColor(R.color.text_secondary))
+        tvTripInfo.visibility = View.GONE
+    }
+
+    private fun setTripLoading(loading: Boolean) {
+        btnStartTrip.isEnabled = !loading
+        btnStartTrip.text = if (loading) {
+            if (isTripActive) getString(R.string.ending_trip) else getString(R.string.starting_trip)
+        } else {
+            if (isTripActive) getString(R.string.end_trip) else getString(R.string.start_trip)
+        }
     }
 
     private fun loadVehicles() {
@@ -302,21 +498,17 @@ class MainActivity : AppCompatActivity() {
                 cameraStreamer = CameraStreamer(this, selectedVehicleId, lifecycleScope)
                 cameraPreview.cameraStreamer = cameraStreamer
 
-                if (isGpsActive) {
-                    stopGpsTracking()
-                }
-                if (isCameraActive) {
-                    stopCameraStreaming()
-                }
-
                 Toast.makeText(this, "Selected: ${vehicle.plateNumber}", Toast.LENGTH_SHORT).show()
             }
             .show()
     }
 
     override fun onDestroy() {
-        if (isGpsActive) stopGpsTracking()
-        if (isCameraActive) stopCameraStreaming()
+        if (isTripActive) {
+            gpsTracker.stopTracking()
+            gpsRepository.stopAutoFlush()
+            cameraStreamer.stopStreaming()
+        }
         super.onDestroy()
     }
 }

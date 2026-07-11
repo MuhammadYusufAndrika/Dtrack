@@ -12,6 +12,7 @@ class StreamService:
     Manages video stream input from various sources.
 
     Supported sources:
+    - "none" or "api": API-only mode — no local camera, accepts frames via WebSocket/API
     - Webcam: integer device ID (e.g., 0, 1)
     - IP Camera: RTSP/HTTP URL string
     - Video file: local file path
@@ -25,6 +26,7 @@ class StreamService:
         self._source = source if source is not None else settings.STREAM_SOURCE
         self._cap: Optional[cv2.VideoCapture] = None
         self._is_image = False
+        self._is_api_only = False
         self._image_frame: Optional[np.ndarray] = None
 
     def initialize(self) -> bool:
@@ -32,20 +34,22 @@ class StreamService:
         Open the video stream based on the configured source.
 
         Returns:
-            bool: True if the stream opened successfully
+            bool: True if the stream opened successfully, or if API-only mode
         """
+        source_str = str(self._source).strip().lower()
+
+        if source_str in ("none", "api", ""):
+            self._is_api_only = True
+            logger.info("Stream source set to API-only mode — no local camera opened")
+            return False
+
         try:
-            # Try to parse source as integer (webcam device ID)
             source_int = int(self._source)
             self._cap = cv2.VideoCapture(source_int)
             self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
             self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
             self._cap.set(cv2.CAP_PROP_FPS, 30)
         except (ValueError, TypeError):
-            # Source is a string — could be URL or file path
-            source_str = str(self._source)
-
-            # Check if it's an image file (single frame)
             if source_str.lower().endswith((".jpg", ".jpeg", ".png", ".bmp", ".tiff")):
                 self._image_frame = cv2.imread(source_str)
                 if self._image_frame is not None:
@@ -56,7 +60,6 @@ class StreamService:
                     logger.error(f"Failed to load image: {source_str}")
                     return False
 
-            # Assume it's a video file or IP camera URL
             self._cap = cv2.VideoCapture(source_str)
 
         if self._cap is not None and not self._cap.isOpened():
@@ -70,12 +73,15 @@ class StreamService:
         """
         Read the next frame from the video stream.
 
-        For image sources, the same frame is returned on every call
-        (useful for testing).
+        For image sources, the same frame is returned on every call.
+        For API-only mode, always returns None (clients send frames directly).
 
         Returns:
-            np.ndarray: BGR frame, or None if stream ended / error
+            np.ndarray: BGR frame, or None if stream ended / error / API-only
         """
+        if self._is_api_only:
+            return None
+
         if self._is_image:
             return self._image_frame.copy() if self._image_frame is not None else None
 
@@ -96,6 +102,15 @@ class StreamService:
         Returns:
             dict with keys: width, height, fps, frame_count, source_type
         """
+        if self._is_api_only:
+            return {
+                "width": 0,
+                "height": 0,
+                "fps": 0,
+                "frame_count": 0,
+                "source_type": "api_only",
+            }
+
         if self._is_image and self._image_frame is not None:
             h, w = self._image_frame.shape[:2]
             return {

@@ -34,6 +34,7 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
     logger.info("FleetVision AI Service starting...")
     logger.info("=" * 60)
+    logger.info(f"STREAM_SOURCE = '{settings.STREAM_SOURCE}'")
 
     try:
         # 1. Initialize detectors
@@ -49,6 +50,8 @@ async def lifespan(app: FastAPI):
         stream_ok = stream_service.initialize()
         if not stream_ok:
             logger.warning("Stream source not available — will accept API/WebSocket frames only")
+        else:
+            logger.info("Stream source opened successfully")
 
         # 4. Initialize communication service
         communication_service = CommunicationService()
@@ -57,12 +60,14 @@ async def lifespan(app: FastAPI):
         # 5. Inject services into routes
         set_services(detection_service, stream_service)
 
-        # 6. Start continuous inference loop if stream is available
+        # 6. Start continuous inference loop only if a real stream source is active
         if stream_ok:
             _continuous_inference_task = asyncio.create_task(
                 continuous_inference_loop()
             )
             logger.info("Continuous inference loop started")
+        else:
+            logger.info("Continuous inference loop skipped (API-only mode)")
 
         logger.info("FleetVision AI Service ready")
     except Exception as e:

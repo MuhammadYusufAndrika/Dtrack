@@ -42,6 +42,103 @@
 
             </LinearLayout>
 
+            <!-- Trip Control Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_trip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                style="@style/Widget.FleetVisionAI.Card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tv_trip_status"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/no_active_trip"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:layout_marginBottom="12dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_start_trip"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="@string/start_trip"
+                        android:textSize="16sp"
+                        android:textAllCaps="false"
+                        app:cornerRadius="12dp"
+                        style="@style/Widget.Material3.Button" />
+
+                    <TextView
+                        android:id="@+id/tv_trip_info"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/text_hint"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- AI Status Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_ai"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                style="@style/Widget.FleetVisionAI.Card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/ai_monitoring"
+                            android:textColor="@color/text_primary"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <View
+                            android:id="@+id/indicator_ai"
+                            android:layout_width="10dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/circle_indicator_disconnected"
+                            android:importantForAccessibility="no" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_ai_status"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/ai_idle"
+                        android:textColor="@color/status_inactive"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- GPS Tracking Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_gps"
@@ -70,12 +167,6 @@
                             android:textColor="@color/text_primary"
                             android:textSize="18sp"
                             android:textStyle="bold" />
-
-                        <com.google.android.material.switchmaterial.SwitchMaterial
-                            android:id="@+id/switch_gps"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:theme="@style/Theme.FleetVisionAI" />
 
                     </LinearLayout>
 
@@ -201,7 +292,7 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Camera Streaming Card -->
+            <!-- Camera Preview Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_camera"
                 android:layout_width="match_parent"
@@ -229,11 +320,6 @@
                             android:textColor="@color/text_primary"
                             android:textSize="18sp"
                             android:textStyle="bold" />
-
-                        <com.google.android.material.switchmaterial.SwitchMaterial
-                            android:id="@+id/switch_camera"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
 
                     </LinearLayout>
 
@@ -316,6 +402,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/select_vehicle"
+                            android:textAllCaps="false"
                             style="@style/Widget.Material3.Button.Tonal" />
 
                     </LinearLayout>

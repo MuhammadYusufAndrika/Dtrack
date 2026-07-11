@@ -3,7 +3,11 @@ import DriverLayout from '../../Layouts/DriverLayout';
 import StatCard from '../../Components/StatCard';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Truck, Route, Activity, Clock, MapPin, Navigation, Play, Square } from 'lucide-react';
+import { Truck, Route, Activity, Clock, MapPin, Navigation, Play, Square, Camera, AlertTriangle, Shield, Eye, Phone, User } from 'lucide-react';
+
+const AI_SERVICE_HOST = window.location.hostname;
+const AI_SERVICE_WS = `ws://${AI_SERVICE_HOST}:5000/inference/stream`;
+const AI_SERVICE_HTTP = `http://${AI_SERVICE_HOST}:5000`;
 
 const vehicleIcon = L.divIcon({ className: '', html: '<div style="width:32px;height:32px;background:#3b82f6;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-size:14px;">🚛</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
 
@@ -23,6 +27,8 @@ function MapUpdater({ position }) {
     return null;
 }
 
+const AI_INITIAL = { face_detected: false, seatbelt: false, fatigue: false, phone: false, looking_away: false, eye_closed: 0, head_pose: { yaw: 0, pitch: 0, roll: 0 } };
+
 export default function DriverDashboard() {
     const [driver, setDriver] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -33,10 +39,20 @@ export default function DriverDashboard() {
     const [distance, setDistance] = useState(0);
     const [gpsError, setGpsError] = useState('');
 
+    const [aiResults, setAiResults] = useState(AI_INITIAL);
+    const [aiStatus, setAiStatus] = useState('idle');
+    const [aiError, setAiError] = useState('');
+    const [cameraActive, setCameraActive] = useState(false);
+
     const watchId = useRef(null);
     const lastPos = useRef(null);
     const locInterval = useRef(null);
     const timerInterval = useRef(null);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    const aiWsRef = useRef(null);
+    const aiFrameInterval = useRef(null);
+    const streamRef = useRef(null);
 
     useEffect(() => {
         (async () => {
@@ -60,16 +76,8 @@ export default function DriverDashboard() {
                     if (ongoing) {
                         setActiveTrip(ongoing);
                         setTripState('tracking');
-                        watchId.current = navigator.geolocation.watchPosition(
-                            (p) => {
-                                const newPos = { lat: p.coords.latitude, lng: p.coords.longitude, speed: p.coords.speed ?? 0, heading: p.coords.heading ?? 0, accuracy: p.coords.accuracy ?? 0 };
-                                setGpsPos(newPos);
-                                if (lastPos.current) setDistance((prev) => prev + haversine(lastPos.current.lat, lastPos.current.lng, newPos.lat, newPos.lng));
-                                lastPos.current = { lat: newPos.lat, lng: newPos.lng };
-                            },
-                            (err) => setGpsError(`GPS error: ${err.message}`),
-                            { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
-                        );
+                        startGpsTracking();
+                        startCamera();
                     }
                 }
             } catch {}
@@ -100,6 +108,118 @@ export default function DriverDashboard() {
         return () => { if (locInterval.current) clearInterval(locInterval.current); };
     }, [tripState, gpsPos, driver?.vehicle]);
 
+    const startGpsTracking = useCallback(() => {
+        watchId.current = navigator.geolocation.watchPosition(
+            (p) => {
+                const newPos = { lat: p.coords.latitude, lng: p.coords.longitude, speed: p.coords.speed ?? 0, heading: p.coords.heading ?? 0, accuracy: p.coords.accuracy ?? 0 };
+                setGpsPos(newPos);
+                if (lastPos.current) setDistance((prev) => prev + haversine(lastPos.current.lat, lastPos.current.lng, newPos.lat, newPos.lng));
+                lastPos.current = { lat: newPos.lat, lng: newPos.lng };
+            },
+            (err) => setGpsError(`GPS error: ${err.message}`),
+            { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+        );
+    }, []);
+
+    const stopGpsTracking = useCallback(() => {
+        if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
+        watchId.current = null;
+    }, []);
+
+    const startCamera = useCallback(async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 320, height: 240 } });
+            streamRef.current = stream;
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                videoRef.current.play();
+            }
+            setCameraActive(true);
+            startAiWebSocket(stream);
+        } catch (err) {
+            setAiError('Camera access denied: ' + err.message);
+        }
+    }, []);
+
+    const stopCamera = useCallback(() => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        }
+        if (videoRef.current) videoRef.current.srcObject = null;
+        setCameraActive(false);
+        stopAiWebSocket();
+    }, []);
+
+    const startAiWebSocket = useCallback((stream) => {
+        try {
+            const ws = new WebSocket(AI_SERVICE_WS);
+            aiWsRef.current = ws;
+
+            ws.onopen = () => {
+                setAiStatus('connected');
+                setAiError('');
+                captureAndSendFrame(stream);
+                aiFrameInterval.current = setInterval(() => captureAndSendFrame(stream), 1000);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.result) {
+                        setAiResults(data.result);
+                    } else if (data.error) {
+                        setAiError(data.error);
+                    }
+                } catch {}
+            };
+
+            ws.onerror = () => {
+                setAiStatus('error');
+                setAiError('AI service connection failed — make sure the AI service is running on port 5000');
+            };
+
+            ws.onclose = () => {
+                setAiStatus('disconnected');
+                if (aiFrameInterval.current) clearInterval(aiFrameInterval.current);
+            };
+        } catch (err) {
+            setAiStatus('error');
+            setAiError('Failed to connect to AI service: ' + err.message);
+        }
+    }, []);
+
+    const stopAiWebSocket = useCallback(() => {
+        if (aiFrameInterval.current) clearInterval(aiFrameInterval.current);
+        if (aiWsRef.current) {
+            aiWsRef.current.close();
+            aiWsRef.current = null;
+        }
+        setAiStatus('idle');
+        setAiResults(AI_INITIAL);
+    }, []);
+
+    const captureAndSendFrame = useCallback((stream) => {
+        if (!videoRef.current || !canvasRef.current || !aiWsRef.current || aiWsRef.current.readyState !== WebSocket.OPEN) return;
+
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        canvas.width = video.videoWidth || 320;
+        canvas.height = video.videoHeight || 240;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+        const base64 = dataUrl.split(',')[1];
+
+        try {
+            aiWsRef.current.send(JSON.stringify({
+                frame: base64,
+                vehicle_id: driver?.vehicle?.plate_number || 'unknown',
+            }));
+        } catch {}
+    }, [driver?.vehicle]);
+
     const handleStartTrip = useCallback(async () => {
         if (!driver?.vehicle) return;
         setTripState('starting');
@@ -120,8 +240,6 @@ export default function DriverDashboard() {
             const tripJson = await tripRes.json();
             if (!tripJson.success) { setGpsError(tripJson.message); setTripState('idle'); return; }
 
-            // Start the trip — this creates the DrivingSession on the backend,
-            // which makes is_driving=true so the admin Live status appears.
             const startRes = await fetch(`/api/trips/${tripJson.data.id}`, {
                 method: 'PATCH', headers,
                 body: JSON.stringify({ action: 'start' }),
@@ -130,23 +248,15 @@ export default function DriverDashboard() {
             if (!startJson.success) { setGpsError(startJson.message); setTripState('idle'); return; }
             setActiveTrip(startJson.data);
 
-            watchId.current = navigator.geolocation.watchPosition(
-                (p) => {
-                    const newPos = { lat: p.coords.latitude, lng: p.coords.longitude, speed: p.coords.speed ?? 0, heading: p.coords.heading ?? 0, accuracy: p.coords.accuracy ?? 0 };
-                    setGpsPos(newPos);
-                    if (lastPos.current) setDistance((prev) => prev + haversine(lastPos.current.lat, lastPos.current.lng, newPos.lat, newPos.lng));
-                    lastPos.current = { lat: newPos.lat, lng: newPos.lng };
-                },
-                (err) => setGpsError(`GPS error: ${err.message}`),
-                { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
-            );
+            startGpsTracking();
             setTripState('tracking');
             setGpsError('');
+            startCamera();
         } catch (err) {
             setGpsError(err.message || 'Failed to start trip');
             setTripState('idle');
         }
-    }, [driver]);
+    }, [driver, startGpsTracking, startCamera]);
 
     const handleEndTrip = useCallback(async () => {
         if (!activeTrip || !gpsPos) return;
@@ -155,8 +265,9 @@ export default function DriverDashboard() {
         const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' };
 
         try {
-            if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
+            stopGpsTracking();
             if (locInterval.current) clearInterval(locInterval.current);
+            stopCamera();
 
             await fetch(`/api/trips/${activeTrip.id}`, {
                 method: 'PATCH', headers,
@@ -173,13 +284,14 @@ export default function DriverDashboard() {
             setGpsError(err.message || 'Failed to end trip');
             setTripState('tracking');
         }
-    }, [activeTrip, gpsPos, distance]);
+    }, [activeTrip, gpsPos, distance, stopGpsTracking, stopCamera]);
 
     useEffect(() => {
         return () => {
-            if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
+            stopGpsTracking();
             if (locInterval.current) clearInterval(locInterval.current);
             if (timerInterval.current) clearInterval(timerInterval.current);
+            stopCamera();
         };
     }, []);
 
@@ -222,13 +334,15 @@ export default function DriverDashboard() {
                 </div>
 
                 {gpsError && <div className="rounded-xl bg-danger-500/10 border border-danger-500/30 p-3 text-sm text-danger-400">{gpsError}</div>}
+                {aiError && <div className="rounded-xl bg-warning-500/10 border border-warning-500/30 p-3 text-sm text-warning-400">{aiError}</div>}
 
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                     <StatCard icon={Truck} label="Vehicle" value={driver.vehicle?.plate_number || 'None'} />
                     <StatCard icon={Activity} label="Status" value={tripState === 'tracking' ? 'On Trip' : driver.status || 'Idle'} />
                     <StatCard icon={Clock} label="Elapsed" value={tripState === 'tracking' ? fmt(elapsed) : '—'} />
                     <StatCard icon={Navigation} label="Speed" value={tripState === 'tracking' && gpsPos ? `${Math.round(gpsPos.speed * 3.6)} km/h` : '—'} />
                     <StatCard icon={MapPin} label="Distance" value={tripState === 'tracking' ? `${distance.toFixed(2)} km` : '—'} />
+                    <StatCard icon={Camera} label="AI Camera" value={cameraActive ? 'Active' : 'Off'} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -280,6 +394,63 @@ export default function DriverDashboard() {
                         )}
                     </div>
                 </div>
+
+                {/* Camera + AI Panel */}
+                {tripState === 'tracking' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Camera Feed */}
+                        <div className="rounded-xl bg-dark-800/50 border border-dark-700/50 overflow-hidden">
+                            <div className="p-4 border-b border-dark-700/50 flex items-center justify-between">
+                                <h3 className="text-sm font-semibold text-dark-100 flex items-center gap-2">
+                                    <Camera className="w-4 h-4" /> Driver Camera
+                                </h3>
+                                {cameraActive ? (
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-success-400 animate-pulse" /><span className="text-xs text-success-400">Streaming</span></span>
+                                ) : (
+                                    <span className="text-xs text-dark-400">Inactive</span>
+                                )}
+                            </div>
+                            <div className="relative bg-dark-900" style={{ minHeight: '240px' }}>
+                                <video ref={videoRef} className="w-full h-auto" style={{ transform: 'scaleX(-1)' }} muted playsInline />
+                                <canvas ref={canvasRef} className="hidden" />
+                                {!cameraActive && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <p className="text-dark-500 text-sm">Camera activates when trip starts</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* AI Detection Results */}
+                        <div className="rounded-xl bg-dark-800/50 border border-dark-700/50 overflow-hidden">
+                            <div className="p-4 border-b border-dark-700/50 flex items-center justify-between">
+                                <h3 className="text-sm font-semibold text-dark-100 flex items-center gap-2">
+                                    <AlertTriangle className="w-4 h-4" /> AI Behavior Detection
+                                </h3>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${aiStatus === 'connected' ? 'bg-success-500/20 text-success-400' : aiStatus === 'error' ? 'bg-danger-500/20 text-danger-400' : 'bg-dark-600 text-dark-400'}`}>
+                                    {aiStatus === 'connected' ? 'Connected' : aiStatus === 'error' ? 'Error' : 'Idle'}
+                                </span>
+                            </div>
+                            <div className="p-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <AiIndicator icon={User} label="Face Detected" active={aiResults.face_detected} />
+                                    <AiIndicator icon={Shield} label="Seatbelt On" active={aiResults.seatbelt} danger={aiResults.seatbelt === false && aiResults.face_detected} />
+                                    <AiIndicator icon={Eye} label="Eyes Open" active={aiResults.eye_closed < 0.5} danger={aiResults.eye_closed >= 0.7} />
+                                    <AiIndicator icon={AlertTriangle} label="No Fatigue" active={!aiResults.fatigue} danger={aiResults.fatigue} />
+                                    <AiIndicator icon={Phone} label="No Phone" active={!aiResults.phone} danger={aiResults.phone} />
+                                    <AiIndicator icon={Navigation} label="Looking Ahead" active={!aiResults.looking_away} danger={aiResults.looking_away} />
+                                </div>
+                                <div className="mt-3 pt-3 border-t border-dark-700/50">
+                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                        <div><span className="text-dark-400">Eye Closure:</span> <span className="text-dark-200 font-medium">{(aiResults.eye_closed * 100).toFixed(0)}%</span></div>
+                                        <div><span className="text-dark-400">Yaw:</span> <span className="text-dark-200 font-medium">{aiResults.head_pose?.yaw?.toFixed(0) || 0}°</span></div>
+                                        <div><span className="text-dark-400">Pitch:</span> <span className="text-dark-200 font-medium">{aiResults.head_pose?.pitch?.toFixed(0) || 0}°</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </DriverLayout>
     );
@@ -290,6 +461,15 @@ function InfoRow({ label, value }) {
         <div className="flex justify-between items-center">
             <span className="text-xs text-dark-400">{label}</span>
             <span className="text-xs font-medium text-dark-200">{value}</span>
+        </div>
+    );
+}
+
+function AiIndicator({ icon: Icon, label, active, danger }) {
+    return (
+        <div className={`flex items-center gap-2 p-2.5 rounded-lg border transition-colors ${danger ? 'bg-danger-500/10 border-danger-500/30' : active ? 'bg-success-500/10 border-success-500/30' : 'bg-dark-700/30 border-dark-600/30'}`}>
+            <Icon className={`w-4 h-4 ${danger ? 'text-danger-400' : active ? 'text-success-400' : 'text-dark-400'}`} />
+            <span className={`text-xs font-medium ${danger ? 'text-danger-400' : active ? 'text-success-400' : 'text-dark-400'}`}>{label}</span>
         </div>
     );
 }

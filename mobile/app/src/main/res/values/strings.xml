@@ -18,6 +18,20 @@
     <string name="camera_streaming_active">Streaming</string>
     <string name="camera_streaming_idle">Idle</string>
 
+    <!-- AI -->
+    <string name="ai_monitoring">AI Behavior Detection</string>
+    <string name="ai_active">Monitoring</string>
+    <string name="ai_idle">Idle</string>
+
+    <!-- Trip -->
+    <string name="start_trip">Start Trip</string>
+    <string name="end_trip">End Trip</string>
+    <string name="trip_in_progress">Trip In Progress</string>
+    <string name="no_active_trip">No Active Trip</string>
+    <string name="starting_trip">Starting trip…</string>
+    <string name="ending_trip">Ending trip…</string>
+    <string name="trip_duration">Duration</string>
+
     <!-- Vehicle -->
     <string name="vehicle_info">Vehicle Info</string>
     <string name="select_vehicle">Select Vehicle</string>
@@ -30,7 +44,13 @@
     <string name="disconnected">Disconnected</string>
     <string name="last_sync">Last Sync</string>
 
+    <!-- Auth -->
+    <string name="login">Login</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+
     <!-- Actions -->
     <string name="start">Start</string>
     <string name="stop">Stop</string>
+    <string name="logout">Logout</string>
 </resources>
