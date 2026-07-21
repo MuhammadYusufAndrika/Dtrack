@@ -83,6 +83,12 @@ php artisan serve --host=0.0.0.0 --port=8000
 
 # Terminal 2:
 npm run dev
+
+#laravel reverb
+cd d:\Code\dtrack\backend
+php artisan reverb:start --host=0.0.0.0 --port=8080
+
+#pastiin untuk login as a driver harus melalui website {baseurl}/login
 ```
 
 Buka `http://localhost:8000`
