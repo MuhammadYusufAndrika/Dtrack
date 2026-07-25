@@ -81,11 +81,11 @@ class CameraStreamer(
             val imageData = stream.toByteArray()
 
             val requestBody = imageData.toRequestBody("image/jpeg".toMediaTypeOrNull())
-            val imagePart = MultipartBody.Part.createFormData("image", "frame.jpg", requestBody)
+            val imagePart = MultipartBody.Part.createFormData("file", "frame.jpg", requestBody)
             val vehicleIdPart = vehicleId.toRequestBody("text/plain".toMediaTypeOrNull())
 
-            val response = RetrofitClient.apiService.sendFrame(imagePart, vehicleIdPart)
-            onFrameSent?.invoke(response.success)
+            val response = RetrofitClient.aiApiService.sendFrame(imagePart, vehicleIdPart)
+            onFrameSent?.invoke(response.isSuccessful)
         } catch (e: Exception) {
             Log.e("CameraStreamer", "Failed to send frame", e)
             onError?.invoke(e)

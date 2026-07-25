@@ -56,6 +56,10 @@ class DriverController extends Controller
             ], 404);
         }
 
+        // Eager-load vehicle and latest AI status so the admin detail page
+        // can display camera feed (keyed by vehicle.vehicle_id) and AI results.
+        $driver->load(['vehicle', 'latestStatus']);
+
         return response()->json([
             'success' => true,
             'message' => 'Driver retrieved successfully.',
@@ -125,6 +129,64 @@ class DriverController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Driver status retrieved successfully.',
+            'data' => new DriverResource($driver),
+        ]);
+    }
+
+    /**
+     * Assign or unassign a vehicle to/from this driver.
+     *
+     * PATCH /api/drivers/{driver}/assign-vehicle
+     * Body: { "vehicle_id": 3 }   — assign vehicle with DB id 3
+     *       { "vehicle_id": null } — unassign current vehicle
+     */
+    public function assignVehicle(\Illuminate\Http\Request $request, $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'vehicle_id' => 'nullable|integer|exists:vehicles,id',
+        ]);
+
+        $driver = $this->driverService->getDriverById($id);
+
+        if (!$driver) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Driver not found.',
+                'data' => null,
+            ], 404);
+        }
+
+        $vehicleId = $validated['vehicle_id'] ?? null;
+
+        if ($vehicleId !== null) {
+            // Make sure the target vehicle is not already owned by another driver
+            $conflict = \App\Models\Vehicle::where('id', $vehicleId)
+                ->whereNotNull('driver_id')
+                ->where('driver_id', '!=', $driver->id)
+                ->first();
+
+            if ($conflict) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vehicle is already assigned to another driver.',
+                    'data' => null,
+                ], 422);
+            }
+        }
+
+        // Detach old vehicle (clear its driver_id)
+        \App\Models\Vehicle::where('driver_id', $driver->id)->update(['driver_id' => null]);
+
+        // Attach new vehicle
+        if ($vehicleId !== null) {
+            \App\Models\Vehicle::where('id', $vehicleId)->update(['driver_id' => $driver->id]);
+        }
+
+        $driver->load('vehicle');
+
+        return response()->json([
+            'success' => true,
+            'message' => $vehicleId ? 'Vehicle assigned successfully.' : 'Vehicle unassigned successfully.',
             'data' => new DriverResource($driver),
         ]);
     }

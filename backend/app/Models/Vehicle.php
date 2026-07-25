@@ -19,6 +19,7 @@ class Vehicle extends Model
         'year',
         'type',
         'status',
+        'driver_id',
     ];
 
     protected $casts = [

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Link } from '@inertiajs/react';
 import { apiFetch } from '../../utils/api';
 import AdminLayout from '../../Layouts/AdminLayout';
 import { PageLoader } from '../../Components/LoadingSpinner';
@@ -212,12 +213,13 @@ export default function Fleet() {
                             <p className="text-dark-400 text-sm text-center py-8">No vehicles found.</p>
                         )}
                         {vehiclesWithLiveLocation.map((v) => (
-                            <div
+                            <Link
                                 key={v.id}
-                                className={`rounded-xl border p-4 transition-all ${
+                                href={`/admin/fleet/${v.id}`}
+                                className={`block rounded-xl border p-4 transition-all ${
                                     v.is_live
-                                        ? 'bg-success-500/5 border-success-500/30'
-                                        : 'bg-dark-800/50 border-dark-700/50'
+                                        ? 'bg-success-500/5 border-success-500/30 hover:bg-success-500/10'
+                                        : 'bg-dark-800/50 border-dark-700/50 hover:bg-dark-800'
                                 }`}
                             >
                                 <div className="flex items-center justify-between mb-1">
@@ -242,7 +244,7 @@ export default function Fleet() {
                                 ) : (
                                     <p className="text-xs text-dark-500 mt-2">No location data</p>
                                 )}
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 </div>

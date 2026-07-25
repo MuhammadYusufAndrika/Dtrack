@@ -50,6 +50,21 @@ object RetrofitClient {
 
     val apiService: ApiService = retrofit.create(ApiService::class.java)
 
+    private val aiOkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(loggingInterceptor)
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .build()
+
+    private val aiRetrofit = Retrofit.Builder()
+        .baseUrl(BuildConfig.INFERENCE_URL)
+        .client(aiOkHttpClient)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+
+    val aiApiService: AiApiService = aiRetrofit.create(AiApiService::class.java)
+
     fun setAuthToken(token: String?) {
         authToken = token
         FleetVisionApp.preferences.edit()

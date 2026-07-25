@@ -18,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);
+        $middleware->alias([
+            'ai.apikey' => \App\Http\Middleware\CheckAiApiKey::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

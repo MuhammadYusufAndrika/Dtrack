@@ -16,17 +16,20 @@ Route::post('/auth/register', [AuthController::class, 'register']);
 
 Route::get('/public/track/{plateNumber}', [PublicTrackingController::class, 'track']);
 
+// AI service submits inference results using X-API-Key (no user session needed)
+Route::post('/ai/result', [AIController::class, 'store'])->middleware('ai.apikey');
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     Route::apiResource('vehicles', VehicleController::class);
     Route::apiResource('drivers', DriverController::class);
+    Route::patch('/drivers/{driver}/assign-vehicle', [DriverController::class, 'assignVehicle']);
     Route::apiResource('trips', TripController::class);
     Route::apiResource('alerts', AlertController::class)->only(['index', 'show']);
 
     Route::post('/location', [LocationController::class, 'store']);
-    Route::post('/ai/result', [AIController::class, 'store']);
 
     Route::get('/vehicles/{vehicle}/locations', [VehicleController::class, 'getLocations']);
     Route::get('/drivers/{driver}/status', [DriverController::class, 'getStatus']);
@@ -35,3 +38,4 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 });
+

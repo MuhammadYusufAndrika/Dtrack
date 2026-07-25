@@ -53,6 +53,8 @@ export default function DriverDashboard() {
     const aiWsRef = useRef(null);
     const aiFrameInterval = useRef(null);
     const streamRef = useRef(null);
+    // Always-current vehicle_id ref so captureAndSendFrame never uses a stale closure value
+    const vehicleIdRef = useRef('unknown');
 
     useEffect(() => {
         (async () => {
@@ -67,7 +69,10 @@ export default function DriverDashboard() {
                 const dRes = await fetch('/api/drivers', { headers });
                 const dJson = await dRes.json();
                 const myDriver = dJson.data?.find((d) => d.email === email);
-                if (myDriver) setDriver(myDriver);
+                if (myDriver) {
+                    setDriver(myDriver);
+                    vehicleIdRef.current = myDriver.vehicle?.vehicle_id || 'unknown';
+                }
 
                 if (myDriver) {
                     const tRes = await fetch('/api/trips', { headers });
@@ -92,6 +97,13 @@ export default function DriverDashboard() {
         }
         return () => { if (timerInterval.current) clearInterval(timerInterval.current); };
     }, [tripState, activeTrip]);
+
+    // Keep vehicleIdRef in sync whenever driver state changes
+    useEffect(() => {
+        if (driver?.vehicle?.vehicle_id) {
+            vehicleIdRef.current = driver.vehicle.vehicle_id;
+        }
+    }, [driver?.vehicle?.vehicle_id]);
 
     useEffect(() => {
         if (tripState === 'tracking' && driver?.vehicle && gpsPos) {
@@ -215,10 +227,11 @@ export default function DriverDashboard() {
         try {
             aiWsRef.current.send(JSON.stringify({
                 frame: base64,
-                vehicle_id: driver?.vehicle?.plate_number || 'unknown',
+                // Always use the ref so we never send 'unknown' due to a stale closure
+                vehicle_id: vehicleIdRef.current,
             }));
         } catch {}
-    }, [driver?.vehicle]);
+    }, []); // no driver dependency — vehicleIdRef is always current
 
     const handleStartTrip = useCallback(async () => {
         if (!driver?.vehicle) return;

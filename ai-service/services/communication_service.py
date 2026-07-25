@@ -101,7 +101,32 @@ class CommunicationService:
             logger.warning("Communication client not initialized")
             return False
 
-        payload = result.model_dump(mode="json")
+        # Build the payload matching Laravel's StoreAIResultRequest validation:
+        #   vehicle_id  → integer (DB primary key)
+        #   phone_usage → boolean (column name differs from model field 'phone')
+        raw = result.model_dump(mode="json")
+
+        vehicle_int_id = result.vehicle_db_id
+        if vehicle_int_id is None:
+            try:
+                vehicle_int_id = int(result.vehicle_id)
+            except (ValueError, TypeError):
+                logger.error(
+                    f"Cannot resolve integer vehicle_db_id for vehicle '{result.vehicle_id}'. "
+                    "Set VEHICLE_DB_ID in .env to match the DB vehicles.id."
+                )
+                return False
+
+        payload = {
+            "vehicle_id": vehicle_int_id,
+            "seatbelt": raw.get("seatbelt"),
+            "fatigue": raw.get("fatigue"),
+            "phone_usage": raw.get("phone"),   # frontend field 'phone' → DB column 'phone_usage'
+            "eye_closed": raw.get("eye_closed"),
+            "yawning": raw.get("yawning"),
+            "looking_away": raw.get("looking_away"),
+            "timestamp": raw.get("timestamp"),
+        }
         url = f"{settings.BACKEND_API_URL}/ai/result"
 
         for attempt in range(1, max_retries + 1):

@@ -10,4 +10,6 @@ return [
 
     'alert_retention_days' => env('FLEETVISION_ALERT_RETENTION_DAYS', 90),
 
+    'ai_api_key' => env('FLEETVISION_AI_API_KEY', ''),
+
 ];

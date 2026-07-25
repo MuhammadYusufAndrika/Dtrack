@@ -5,13 +5,10 @@ import com.fleetvisionai.models.DriverInfo
 import com.fleetvisionai.models.GpsData
 import com.fleetvisionai.models.TripInfo
 import com.fleetvisionai.models.VehicleInfo
-import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.GET
-import retrofit2.http.Multipart
 import retrofit2.http.PATCH
 import retrofit2.http.POST
-import retrofit2.http.Part
 import retrofit2.http.Path
 
 interface ApiService {
@@ -46,10 +43,4 @@ interface ApiService {
     @GET("api/trips/{id}")
     suspend fun getTrip(@Path("id") id: Int): ApiResponse<TripInfo>
 
-    @Multipart
-    @POST("api/inference")
-    suspend fun sendFrame(
-        @Part image: MultipartBody.Part,
-        @Part("vehicle_id") vehicleId: okhttp3.RequestBody
-    ): ApiResponse<Any>
 }

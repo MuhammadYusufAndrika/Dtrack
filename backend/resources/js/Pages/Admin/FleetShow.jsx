@@ -33,8 +33,8 @@ export default function FleetShow({ id }) {
     const fetchFrame = useCallback(async () => {
         if (!vehicle) return;
         try {
-            const plate = vehicle.plate_number;
-            const res = await fetch(`${AI_SERVICE_URL}/inference/frame/${plate}`);
+            const key = vehicle.vehicle_id;
+            const res = await fetch(`${AI_SERVICE_URL}/inference/frame/${key}`);
             if (res.ok) {
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
@@ -44,7 +44,7 @@ export default function FleetShow({ id }) {
                 const framesRes = await fetch(`${AI_SERVICE_URL}/inference/frames`);
                 if (framesRes.ok) {
                     const data = await framesRes.json();
-                    const vResult = data.vehicles?.[plate];
+                    const vResult = data.vehicles?.[key];
                     if (vResult?.result) setAiResult(vResult.result);
                 }
             } else if (res.status === 404) {
