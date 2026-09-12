@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e16">
+<title>Offline — FleetVision AI</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0e16; color: #e2e8f0; font-family: system-ui, sans-serif;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .card { max-width: 420px; text-align: center; background: #0f1420; border: 1px solid #1e293b;
+    border-radius: 20px; padding: 36px 28px; }
+  .dot { width: 64px; height: 64px; border-radius: 18px; background: #2563eb;
+    display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 16px; }
+  h1 { font-size: 20px; margin-bottom: 8px; }
+  p { color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+  button { background: #2563eb; color: #fff; border: 0; border-radius: 12px;
+    padding: 12px 24px; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; }
+  button:active { transform: scale(.98); }
+  a { display: inline-block; margin-top: 14px; color: #60a5fa; font-size: 13px; text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="dot">🚛</div>
+    <h1>Kamu sedang offline</h1>
+    <p>GPS tracking butuh koneksi internet.<br>Periksa koneksi lalu coba lagi — halaman <b>/track</b> akan dimuat otomatis saat online.</p>
+    <button onclick="location.reload()">Coba Lagi</button>
+    <a href="/track?utm_source=twa_offline">← Kembali ke Tracking</a>
+  </div>
+  <script>
+    window.addEventListener('online', () => location.reload());
+  </script>
+</body>
+</html>

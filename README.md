@@ -7,7 +7,7 @@ Platform fleet management berbasis AI untuk monitoring kendaraan logistik secara
 ---
 
 ## Fitur Utama
-
+    
 | Fitur | Deskripsi |
 |-------|-----------|
 | **Live GPS Tracking** | Pantau posisi kendaraan real-time (update setiap 5 detik) |
@@ -87,6 +87,9 @@ npm run dev
 #laravel reverb
 cd d:\Code\dtrack\backend
 php artisan reverb:start --host=0.0.0.0 --port=8080
+
+cd d:\ai-service 
+python run.py
 
 #pastiin untuk login as a driver harus melalui website {baseurl}/login
 ```

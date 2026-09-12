@@ -20,4 +20,29 @@ Route::get('/driver', fn () => Inertia::render('Driver/Dashboard'))->name('drive
 Route::get('/driver/trips', fn () => Inertia::render('Driver/Trips'))->name('driver.trips');
 Route::get('/driver/alerts', fn () => Inertia::render('Driver/Alerts'))->name('driver.alerts');
 
+Route::get('/.well-known/assetlinks.json', function () {
+    $fingerprints = config('twa.fingerprints', []);
+
+    // Placeholder aman: GANTI dengan SHA-256 asli sebelum release ke Play Store.
+    if (empty($fingerprints)) {
+        $fingerprints = ['REPLACE_WITH_SHA256_FINGERPRINT'];
+    }
+
+    $relation = ['delegate_permission/common.handle_all_urls'];
+
+    $data = array_map(fn ($fp) => [
+        'relation' => $relation,
+        'target' => [
+            'namespace' => 'android_app',
+            'package_name' => config('twa.package', 'com.fleetvisionai.twa'),
+            'sha256_cert_fingerprints' => [$fp],
+        ],
+    ], $fingerprints);
+
+    return response()->json($data, 200, [
+        'Content-Type' => 'application/json',
+        'Cache-Control' => 'public, max-age=3600',
+    ]);
+});
+
 Route::get('/', fn () => redirect('/track'));

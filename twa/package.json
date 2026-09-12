@@ -1,0 +1,16 @@
+{
+  "name": "fleetvision-twa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Trusted Web Activity wrapper untuk FleetVision AI (start: /track)",
+  "scripts": {
+    "doctor": "bubblewrap doctor",
+    "init": "bubblewrap init --manifest ./twa-manifest.json",
+    "update": "bubblewrap update --manifest ./twa-manifest.json",
+    "build": "bubblewrap build --manifest ./twa-manifest.json",
+    "fingerprint": "bubblewrap fingerprint --manifest ./twa-manifest.json"
+  },
+  "devDependencies": {
+    "@bubblewrap/cli": "^1.22.0"
+  }
+}

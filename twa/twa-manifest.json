@@ -1,0 +1,63 @@
+{
+  "packageId": "com.fleetvisionai.twa",
+  "host": "fleetvision.example.com",
+  "name": "FleetVision AI",
+  "launcherName": "FleetVision",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#0a0e16",
+  "backgroundColor": "#0a0e16",
+  "navigationColor": "#0a0e16",
+  "navigationColorDark": "#0a0e16",
+  "navigationDividerColor": "#1e293b",
+  "navigationDividerColorDark": "#1e293b",
+  "backgroundColorDark": "#0a0e16",
+  "themeColorDark": "#0a0e16",
+  "startUrl": "/track?utm_source=twa",
+  "iconUrl": "https://fleetvision.example.com/icons/icon-512.png",
+  "maskableIconUrl": "https://fleetvision.example.com/icons/maskable-512.png",
+  "monochromeIconUrl": "https://fleetvision.example.com/icons/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "enableNotifications": true,
+  "shortcuts": [
+    {
+      "name": "Live Tracking",
+      "shortName": "Track",
+      "url": "/track?utm_source=twa_shortcut"
+    },
+    {
+      "name": "Driver Dashboard",
+      "shortName": "Driver",
+      "url": "/driver?utm_source=twa_shortcut"
+    },
+    {
+      "name": "Login",
+      "shortName": "Login",
+      "url": "/login?utm_source=twa_shortcut"
+    }
+  ],
+  "signing": {
+    "storeFile": "android.keystore",
+    "keyAlias": "fleetvision"
+  },
+  "appVersionCode": 1,
+  "appVersion": "1.0.0",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    },
+    "playBilling": {
+      "enabled": false
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://fleetvision.example.com/",
+  "minSdkVersion": 23,
+  "orientationLock": "portrait"
+}
