@@ -1,4 +1,5 @@
 import base64
+import json
 import cv2
 import numpy as np
 import threading
@@ -32,19 +33,54 @@ def set_services(ds, ss=None):
     stream_service = ss
 
 
+def _encode_frame(frame: np.ndarray, quality: int = 75, max_width: int = 640):
+    """Encode frame to JPEG bytes. Downscale jika terlalu besar biar hemat bandwidth hosting."""
+    try:
+        h, w = frame.shape[:2]
+        if w > max_width:
+            scale = max_width / float(w)
+            frame = cv2.resize(frame, (max_width, int(h * scale)), interpolation=cv2.INTER_AREA)
+        ok, jpeg_buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
+        if not ok:
+            return None
+        return jpeg_buffer.tobytes()
+    except Exception:
+        return None
+
+
 def _store_frame(vehicle_id: str, frame: np.ndarray, result=None):
     """Store the latest frame for a vehicle as JPEG bytes."""
     try:
-        _, jpeg_buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
-        jpeg_bytes = jpeg_buffer.tobytes()
+        jpeg_bytes = _encode_frame(frame)
+        if jpeg_bytes is None:
+            return
         with _frame_lock:
+            prev = _frame_store.get(vehicle_id)
             _frame_store[vehicle_id] = {
                 "frame": jpeg_bytes,
+                # Kalau result None, pertahankan hasil AI sebelumnya biar admin tidak kedip No Data
                 "timestamp": datetime.utcnow(),
-                "result": result.model_dump(mode="json") if result else None,
+                "result": result.model_dump(mode="json") if result else (prev.get("result") if prev else None),
             }
     except Exception as e:
         logger.error(f"Failed to store frame for {vehicle_id}: {e}")
+
+
+def _store_frame_fast(vehicle_id: str, frame: np.ndarray):
+    """Simpan frame mentah SEGERA sebelum inference (decouple display FPS dari AI latency)."""
+    _store_frame(vehicle_id, frame, result=None)
+
+
+def _update_result(vehicle_id: str, result):
+    """Update hasil AI tanpa re-encode JPEG (hemat CPU)."""
+    try:
+        with _frame_lock:
+            entry = _frame_store.get(vehicle_id)
+            if entry is None:
+                return
+            entry["result"] = result.model_dump(mode="json") if result else entry.get("result")
+    except Exception as e:
+        logger.error(f"Failed to update result for {vehicle_id}: {e}")
 
 
 @router.post("")
@@ -70,10 +106,14 @@ async def run_inference(file: UploadFile = File(...), vehicle_id: str = "") -> J
                 content={"error": "Could not decode image"},
             )
 
+        # Simpan duluan biar admin langsung lihat frame baru (tidak nunggu YOLO/MediaPipe)
+        if vehicle_id:
+            _store_frame_fast(vehicle_id, frame)
+
         result = detection_service.process_frame(frame)
 
         if vehicle_id:
-            _store_frame(vehicle_id, frame, result)
+            _update_result(vehicle_id, result)
 
         return JSONResponse(
             content=result.model_dump(mode="json"),
@@ -144,9 +184,12 @@ async def inference_websocket(websocket: WebSocket):
                     await websocket.send_json({"error": "Invalid frame data"})
                     continue
 
+                # Simpan cepat dulu, baru inference — admin dapat 2-5 FPS bukan 0.5 FPS
+                _store_frame_fast(vehicle_id, frame)
+
                 result = detection_service.process_frame(frame)
 
-                _store_frame(vehicle_id, frame, result)
+                _update_result(vehicle_id, result)
 
                 await websocket.send_json({
                     "result": result.model_dump(mode="json"),
@@ -186,14 +229,24 @@ async def get_vehicle_frame(vehicle_id: str):
             content={"error": f"Frame for {vehicle_id} is stale ({int(age_seconds)}s old)"},
         )
 
+    # Kirim hasil AI lewat header biar admin cukup 1 request (hemat 50% RTT di hosting)
+    headers = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "X-Vehicle-ID": vehicle_id,
+        "X-Timestamp": entry["timestamp"].isoformat(),
+        "X-Age-Seconds": str(round(age_seconds, 1)),
+    }
+    try:
+        if entry.get("result"):
+            # Compact JSON, aman untuk header (<8KB)
+            headers["X-AI-Result"] = json.dumps(entry["result"], separators=(",", ":"))
+    except Exception:
+        pass
+
     return StreamingResponse(
         iter([entry["frame"]]),
         media_type="image/jpeg",
-        headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "X-Vehicle-ID": vehicle_id,
-            "X-Timestamp": entry["timestamp"].isoformat(),
-        },
+        headers=headers,
     )
 
 

@@ -1,15 +1,32 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import DriverLayout from '../../Layouts/DriverLayout';
 import StatCard from '../../Components/StatCard';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import PageHeader from '../../Components/PageHeader';
+import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
+import MapTiles from '../../Components/MapTiles';
 import L from 'leaflet';
 import { Truck, Route, Activity, Clock, MapPin, Navigation, Play, Square, Camera, AlertTriangle, Shield, Eye, Phone, User } from 'lucide-react';
 
-const AI_SERVICE_HOST = window.location.hostname;
-const AI_SERVICE_WS = `ws://${AI_SERVICE_HOST}:5000/inference/stream`;
-const AI_SERVICE_HTTP = `http://${AI_SERVICE_HOST}:5000`;
+function resolveAiHttp() {
+    const envUrl = import.meta.env?.VITE_AI_SERVICE_URL;
+    if (envUrl) return envUrl.replace(/\/$/, '');
+    const { protocol, hostname } = window.location;
+    if (protocol === 'https:') return `https://${hostname}/ai`;
+    return `http://${hostname}:5000`;
+}
+function resolveAiWs() {
+    const envWs = import.meta.env?.VITE_AI_SERVICE_WS;
+    if (envWs) return envWs;
+    const { protocol, hostname } = window.location;
+    if (protocol === 'https:') return `wss://${hostname}/ai/inference/stream`;
+    return `ws://${hostname}:5000/inference/stream`;
+}
+const AI_SERVICE_HTTP = resolveAiHttp();
+const AI_SERVICE_WS = resolveAiWs();
+// Kirim 2 FPS (500ms) biar admin mulus. Jangan <400ms — AI YOLO/Mediapipe ~500ms, nanti antre.
+const AI_SEND_MS = Number(import.meta.env?.VITE_AI_SEND_MS) || 500;
 
-const vehicleIcon = L.divIcon({ className: '', html: '<div style="width:32px;height:32px;background:#3b82f6;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-size:14px;">🚛</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
+const vehicleIcon = L.divIcon({ className: '', html: '<div style="width:36px;height:36px;background:linear-gradient(135deg,#22c55e,#06b6d4);border:3px solid #fff;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(34,197,94,0.5);font-size:16px;">🚛</div>', iconSize: [36, 36], iconAnchor: [18, 18] });
 
 function haversine(lat1, lon1, lat2, lon2) {
     const R = 6371;
@@ -53,7 +70,6 @@ export default function DriverDashboard() {
     const aiWsRef = useRef(null);
     const aiFrameInterval = useRef(null);
     const streamRef = useRef(null);
-    // Always-current vehicle_id ref so captureAndSendFrame never uses a stale closure value
     const vehicleIdRef = useRef('unknown');
 
     useEffect(() => {
@@ -98,7 +114,6 @@ export default function DriverDashboard() {
         return () => { if (timerInterval.current) clearInterval(timerInterval.current); };
     }, [tripState, activeTrip]);
 
-    // Keep vehicleIdRef in sync whenever driver state changes
     useEffect(() => {
         if (driver?.vehicle?.vehicle_id) {
             vehicleIdRef.current = driver.vehicle.vehicle_id;
@@ -140,7 +155,7 @@ export default function DriverDashboard() {
 
     const startCamera = useCallback(async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 320, height: 240 } });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } });
             streamRef.current = stream;
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
@@ -172,7 +187,7 @@ export default function DriverDashboard() {
                 setAiStatus('connected');
                 setAiError('');
                 captureAndSendFrame(stream);
-                aiFrameInterval.current = setInterval(() => captureAndSendFrame(stream), 1000);
+                aiFrameInterval.current = setInterval(() => captureAndSendFrame(stream), AI_SEND_MS);
             };
 
             ws.onmessage = (event) => {
@@ -194,6 +209,13 @@ export default function DriverDashboard() {
             ws.onclose = () => {
                 setAiStatus('disconnected');
                 if (aiFrameInterval.current) clearInterval(aiFrameInterval.current);
+                // Auto-reconnect 3 detik kalau trip masih jalan (penting di hosting / sinyal jelek)
+                setTimeout(() => {
+                    if (aiWsRef.current === ws) {
+                        aiWsRef.current = null;
+                        if (streamRef.current) startAiWebSocket(streamRef.current);
+                    }
+                }, 3000);
             };
         } catch (err) {
             setAiStatus('error');
@@ -213,25 +235,32 @@ export default function DriverDashboard() {
 
     const captureAndSendFrame = useCallback((stream) => {
         if (!videoRef.current || !canvasRef.current || !aiWsRef.current || aiWsRef.current.readyState !== WebSocket.OPEN) return;
+        // Backpressure: skip frame kalau WS masih antre >1MB (cegah delay menumpuk di hosting)
+        try {
+            if (aiWsRef.current.bufferedAmount > 1024 * 1024) return;
+        } catch {}
 
         const video = videoRef.current;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
-        canvas.width = video.videoWidth || 320;
-        canvas.height = video.videoHeight || 240;
+        // Cap 640x480 biar hemat bandwidth tapi tidak pecah di admin
+        const vw = video.videoWidth || 640;
+        const vh = video.videoHeight || 480;
+        const scale = Math.min(1, 640 / vw);
+        canvas.width = Math.round(vw * scale);
+        canvas.height = Math.round(vh * scale);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
         const base64 = dataUrl.split(',')[1];
 
         try {
             aiWsRef.current.send(JSON.stringify({
                 frame: base64,
-                // Always use the ref so we never send 'unknown' due to a stale closure
                 vehicle_id: vehicleIdRef.current,
             }));
         } catch {}
-    }, []); // no driver dependency — vehicleIdRef is always current
+    }, []);
 
     const handleStartTrip = useCallback(async () => {
         if (!driver?.vehicle) return;
@@ -320,145 +349,167 @@ export default function DriverDashboard() {
     }
 
     if (!driver) {
-        return <DriverLayout><div className="text-center py-12"><p className="text-dark-400">No driver profile linked to this account.</p></div></DriverLayout>;
+        return <DriverLayout><div className="glass rounded-3xl text-center py-14 px-6"><p className="text-4xl mb-3">👤</p><p className="text-dark-500 font-semibold">Belum ada profil driver</p><p className="text-dark-500 text-sm mt-1">Hubungi admin untuk menautkan akun ini.</p></div></DriverLayout>;
     }
+
+    const tracking = tripState === 'tracking';
+    const busy = tripState === 'starting' || tripState === 'ending';
 
     return (
         <DriverLayout>
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div><h1 className="text-2xl font-bold text-dark-50">My Dashboard</h1><p className="text-dark-400 text-sm mt-1">Welcome back, {driver.name}</p></div>
-                    {tripState === 'idle' && driver.vehicle && (
-                        <button onClick={handleStartTrip} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold transition-colors">
-                            <Play className="w-4 h-4" /> Start Trip
-                        </button>
-                    )}
-                    {(tripState === 'starting' || tripState === 'ending') && (
-                        <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-dark-700 text-dark-300 text-sm">
-                            <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                            {tripState === 'starting' ? 'Starting trip...' : 'Ending trip...'}
-                        </div>
-                    )}
-                    {tripState === 'tracking' && (
-                        <button onClick={handleEndTrip} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-danger-600 hover:bg-danger-500 text-white text-sm font-semibold transition-colors">
-                            <Square className="w-4 h-4" /> End Trip
-                        </button>
-                    )}
-                </div>
-
-                {gpsError && <div className="rounded-xl bg-danger-500/10 border border-danger-500/30 p-3 text-sm text-danger-400">{gpsError}</div>}
-                {aiError && <div className="rounded-xl bg-warning-500/10 border border-warning-500/30 p-3 text-sm text-warning-400">{aiError}</div>}
-
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                    <StatCard icon={Truck} label="Vehicle" value={driver.vehicle?.plate_number || 'None'} />
-                    <StatCard icon={Activity} label="Status" value={tripState === 'tracking' ? 'On Trip' : driver.status || 'Idle'} />
-                    <StatCard icon={Clock} label="Elapsed" value={tripState === 'tracking' ? fmt(elapsed) : '—'} />
-                    <StatCard icon={Navigation} label="Speed" value={tripState === 'tracking' && gpsPos ? `${Math.round(gpsPos.speed * 3.6)} km/h` : '—'} />
-                    <StatCard icon={MapPin} label="Distance" value={tripState === 'tracking' ? `${distance.toFixed(2)} km` : '—'} />
-                    <StatCard icon={Camera} label="AI Camera" value={cameraActive ? 'Active' : 'Off'} />
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2">
-                        <div className="rounded-xl bg-dark-800/50 border border-dark-700/50 overflow-hidden">
-                            <div className="p-4 border-b border-dark-700/50 flex items-center justify-between">
-                                <h2 className="text-sm font-semibold text-dark-100">{tripState === 'tracking' ? 'Live Tracking' : 'Current Location'}</h2>
-                                {tripState === 'tracking' && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-success-400 animate-pulse" /><span className="text-xs text-success-400">Live</span></span>}
+            <div className="space-y-5">
+                <PageHeader
+                    eyebrow="Driver Console"
+                    title={`Halo, ${driver.name.split(' ')[0]} 👋`}
+                    description={tracking ? `Trip #${activeTrip?.id} sedang berjalan — GPS & kamera AI aktif.` : 'Siap jalan? Mulai trip untuk mengaktifkan GPS & AI monitoring.'}
+                    action={
+                        tripState === 'idle' && driver.vehicle ? (
+                            <button onClick={handleStartTrip} className="btn-glow flex items-center gap-2 px-6 py-3 rounded-2xl text-white text-sm font-bold">
+                                <Play className="w-4 h-4" /> Mulai Trip
+                            </button>
+                        ) : busy ? (
+                            <div className="flex items-center gap-2.5 px-6 py-3 rounded-2xl glass-strong text-sm text-dark-700">
+                                <span className="w-4 h-4 border-2 border-success-500 border-t-transparent rounded-full animate-spin" />
+                                {tripState === 'starting' ? 'Memulai trip…' : 'Mengakhiri trip…'}
                             </div>
-                            <div className="h-[400px]">
-                                <MapContainer center={[-6.2088, 106.8456]} zoom={15} className="h-full w-full z-0" zoomControl={false}>
-                                    <TileLayer attribution='&copy; <a href="https://carto.com/">CARTO</a>' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
-                                    {gpsPos && <MapUpdater position={[gpsPos.lat, gpsPos.lng]} />}
-                                    {gpsPos && <Marker position={[gpsPos.lat, gpsPos.lng]} icon={vehicleIcon}><Popup><div className="text-sm"><p>Speed: {Math.round(gpsPos.speed * 3.6)} km/h</p></div></Popup></Marker>}
-                                </MapContainer>
+                        ) : tracking ? (
+                            <button onClick={handleEndTrip} className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-danger-600 to-rose-500 hover:brightness-110 text-white text-sm font-bold transition-all shadow-[0_8px_28px_rgba(239,68,68,0.45)]">
+                                <Square className="w-4 h-4" /> Selesaikan Trip
+                            </button>
+                        ) : null
+                    }
+                />
+
+                {gpsError && <div className="glass rounded-2xl !border-danger-500/30 p-3.5 text-sm text-danger-500 animate-fade-up">⚠️ {gpsError}</div>}
+                {aiError && <div className="glass rounded-2xl !border-warning-500/30 p-3.5 text-sm text-warning-500 animate-fade-up">📷 {aiError}</div>}
+
+                {tracking ? (
+                    <div className="relative overflow-hidden rounded-3xl p-[1.5px] bg-gradient-to-r from-success-500 via-accent-500 to-primary-500 animate-fade-up">
+                        <div className="rounded-3xl bg-white/90 backdrop-blur-xl px-5 sm:px-7 py-5 flex flex-col sm:flex-row items-center gap-5">
+                            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-success-500">
+                                <span className="w-2.5 h-2.5 rounded-full bg-success-400 animate-pulse" /> Live Trip
+                            </div>
+                            <div className="font-display text-4xl sm:text-5xl font-bold tabular-nums text-dark-900 tracking-tight">{fmt(elapsed)}</div>
+                            <div className="flex items-center gap-6 sm:ml-auto text-center">
+                                <div><p className="font-display text-xl font-bold text-dark-900 tabular-nums">{gpsPos ? Math.round(gpsPos.speed * 3.6) : 0}<span className="text-xs text-dark-400 font-sans font-medium"> km/h</span></p><p className="text-[10px] uppercase tracking-widest text-dark-500 font-bold">Speed</p></div>
+                                <div className="w-px h-10 bg-dark-200/70" />
+                                <div><p className="font-display text-xl font-bold text-dark-900 tabular-nums">{distance.toFixed(2)}<span className="text-xs text-dark-400 font-sans font-medium"> km</span></p><p className="text-[10px] uppercase tracking-widest text-dark-500 font-bold">Jarak</p></div>
+                                <div className="w-px h-10 bg-dark-200/70" />
+                                <div><p className="font-display text-xl font-bold text-dark-900 font-mono">{driver.vehicle?.plate_number}</p><p className="text-[10px] uppercase tracking-widest text-dark-500 font-bold">Unit</p></div>
                             </div>
                         </div>
                     </div>
+                ) : (
+                    !driver.vehicle && (
+                        <div className="glass rounded-2xl p-5 flex items-center gap-4 animate-fade-up">
+                            <span className="text-3xl">🚛</span>
+                            <div><p className="text-sm font-bold text-dark-900">Belum ada kendaraan</p><p className="text-xs text-dark-400">Minta admin untuk assign unit sebelum mulai trip.</p></div>
+                        </div>
+                    )
+                )}
+
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
+                    <StatCard icon={Truck} label="Unit" value={driver.vehicle?.plate_number || '—'} accent="blue" delay="delay-1" />
+                    <StatCard icon={Activity} label="Status" value={tracking ? 'On Trip' : driver.status || 'Siaga'} accent={tracking ? 'green' : 'cyan'} delay="delay-1" />
+                    <StatCard icon={Clock} label="Durasi" value={tracking ? fmt(elapsed) : '—'} accent="violet" delay="delay-2" />
+                    <StatCard icon={Navigation} label="Speed" value={tracking && gpsPos ? `${Math.round(gpsPos.speed * 3.6)} km/h` : '—'} accent="cyan" delay="delay-2" />
+                    <StatCard icon={MapPin} label="Jarak" value={tracking ? `${distance.toFixed(2)} km` : '—'} accent="amber" delay="delay-3" />
+                    <StatCard icon={Camera} label="AI Cam" value={cameraActive ? 'Aktif' : 'Mati'} accent={cameraActive ? 'green' : 'red'} delay="delay-3" />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div className="lg:col-span-2 glass rounded-3xl overflow-hidden">
+                        <div className="px-5 py-4 border-b border-dark-200/60 flex items-center justify-between">
+                            <h2 className="text-sm font-bold text-dark-900 flex items-center gap-2"><Route className="w-4 h-4 text-primary-500" /> {tracking ? 'Peta Live' : 'Posisi Terakhir'}</h2>
+                            {tracking && <span className="flex items-center gap-1.5 text-[11px] font-bold text-success-500"><span className="w-1.5 h-1.5 rounded-full bg-success-400 animate-pulse" /> LIVE</span>}
+                        </div>
+                        <div className="h-[380px]">
+                            <MapContainer center={gpsPos ? [gpsPos.lat, gpsPos.lng] : [-6.2088, 106.8456]} zoom={15} className="h-full w-full z-0" zoomControl={false}>
+                                <MapTiles />
+                                {gpsPos && <MapUpdater position={[gpsPos.lat, gpsPos.lng]} />}
+                                {gpsPos && <Marker position={[gpsPos.lat, gpsPos.lng]} icon={vehicleIcon}><Popup><div className="text-sm"><p className="font-bold">{Math.round(gpsPos.speed * 3.6)} km/h</p><p className="font-mono text-xs">{gpsPos.lat.toFixed(5)}, {gpsPos.lng.toFixed(5)}</p></div></Popup></Marker>}
+                            </MapContainer>
+                        </div>
+                        {tracking && gpsPos && (
+                            <div className="px-5 py-3.5 border-t border-dark-200/60 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                <InfoMini label="Latitude" value={gpsPos.lat.toFixed(6)} mono />
+                                <InfoMini label="Longitude" value={gpsPos.lng.toFixed(6)} mono />
+                                <InfoMini label="Akurasi" value={gpsPos.accuracy < 1 ? '<1 m' : `${Math.round(gpsPos.accuracy)} m`} />
+                                <InfoMini label="Heading" value={`${Math.round(gpsPos.heading)}°`} />
+                            </div>
+                        )}
+                    </div>
                     <div className="space-y-4">
-                        <div className="rounded-xl bg-dark-800/50 border border-dark-700/50 p-4">
-                            <h3 className="text-sm font-semibold text-dark-100 mb-3">Driver Info</h3>
-                            <div className="space-y-3">
-                                <InfoRow label="Name" value={driver.name} />
-                                <InfoRow label="Email" value={driver.email} />
-                                <InfoRow label="Phone" value={driver.phone || '—'} />
-                                <InfoRow label="License" value={driver.license_number || '—'} />
+                        <div className="glass rounded-3xl p-5">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-dark-400 mb-4">Profil Driver</h3>
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-success-500 to-accent-600 flex items-center justify-center font-display font-bold text-white text-lg">{driver.name[0]}</div>
+                                <div className="min-w-0"><p className="text-sm font-bold text-dark-900 truncate">{driver.name}</p><p className="text-xs text-dark-400 truncate">{driver.email}</p></div>
+                            </div>
+                            <div className="space-y-2.5">
+                                <InfoRow label="Telepon" value={driver.phone || '—'} />
+                                <InfoRow label="SIM" value={driver.license_number || '—'} />
+                                <InfoRow label="Unit" value={driver.vehicle ? `${driver.vehicle.plate_number} · ${driver.vehicle.brand}` : '—'} />
                             </div>
                         </div>
-                        <div className="rounded-xl bg-dark-800/50 border border-dark-700/50 p-4">
-                            <h3 className="text-sm font-semibold text-dark-100 mb-3">Vehicle Info</h3>
-                            {driver.vehicle ? (
-                                <div className="space-y-3">
-                                    <InfoRow label="Plate" value={driver.vehicle.plate_number} />
-                                    <InfoRow label="Brand" value={driver.vehicle.brand} />
-                                    <InfoRow label="Model" value={driver.vehicle.model} />
-                                </div>
-                            ) : <p className="text-sm text-dark-400">No vehicle assigned</p>}
-                        </div>
-                        {tripState === 'tracking' && gpsPos && (
-                            <div className="rounded-xl bg-dark-800/50 border border-dark-700/50 p-4">
-                                <h3 className="text-sm font-semibold text-dark-100 mb-3">GPS Data</h3>
-                                <div className="space-y-2 text-xs">
-                                    <InfoRow label="Latitude" value={gpsPos.lat.toFixed(6)} />
-                                    <InfoRow label="Longitude" value={gpsPos.lng.toFixed(6)} />
-                                    <InfoRow label="Accuracy" value={gpsPos.accuracy < 1 ? '<1 m' : `${Math.round(gpsPos.accuracy)} m`} />
-                                    <InfoRow label="Heading" value={`${Math.round(gpsPos.heading)}°`} />
+                        {tracking && (
+                            <div className="rounded-3xl p-[1.5px] bg-gradient-to-br from-primary-500/50 to-accent-500/30">
+                                <div className="rounded-3xl bg-white/90 p-5">
+                                    <h3 className="text-xs font-bold uppercase tracking-widest text-dark-400 mb-3">Kondisi AI</h3>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <AiMini label="Seatbelt" ok={aiResults.seatbelt} warn={aiResults.face_detected && !aiResults.seatbelt} />
+                                        <AiMini label="Fokus" ok={!aiResults.looking_away} warn={aiResults.looking_away} />
+                                        <AiMini label="Segar" ok={!aiResults.fatigue} warn={aiResults.fatigue} />
+                                        <AiMini label="No HP" ok={!aiResults.phone} warn={aiResults.phone} />
+                                    </div>
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Camera + AI Panel */}
-                {tripState === 'tracking' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Camera Feed */}
-                        <div className="rounded-xl bg-dark-800/50 border border-dark-700/50 overflow-hidden">
-                            <div className="p-4 border-b border-dark-700/50 flex items-center justify-between">
-                                <h3 className="text-sm font-semibold text-dark-100 flex items-center gap-2">
-                                    <Camera className="w-4 h-4" /> Driver Camera
-                                </h3>
+                {tracking && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <div className="glass rounded-3xl overflow-hidden">
+                            <div className="px-5 py-4 border-b border-dark-200/60 flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-dark-900 flex items-center gap-2"><Camera className="w-4 h-4 text-accent-400" /> Kamera Driver</h3>
                                 {cameraActive ? (
-                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-success-400 animate-pulse" /><span className="text-xs text-success-400">Streaming</span></span>
+                                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-success-500"><span className="w-1.5 h-1.5 rounded-full bg-success-400 animate-pulse" /> Streaming</span>
                                 ) : (
-                                    <span className="text-xs text-dark-400">Inactive</span>
+                                    <span className="text-[11px] text-dark-500">Mati</span>
                                 )}
                             </div>
-                            <div className="relative bg-dark-900" style={{ minHeight: '240px' }}>
+                            <div className="relative bg-black" style={{ minHeight: '240px' }}>
                                 <video ref={videoRef} className="w-full h-auto" style={{ transform: 'scaleX(-1)' }} muted playsInline />
                                 <canvas ref={canvasRef} className="hidden" />
                                 {!cameraActive && (
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <p className="text-dark-500 text-sm">Camera activates when trip starts</p>
+                                        <p className="text-dark-500 text-sm">Kamera aktif saat trip berjalan</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* AI Detection Results */}
-                        <div className="rounded-xl bg-dark-800/50 border border-dark-700/50 overflow-hidden">
-                            <div className="p-4 border-b border-dark-700/50 flex items-center justify-between">
-                                <h3 className="text-sm font-semibold text-dark-100 flex items-center gap-2">
-                                    <AlertTriangle className="w-4 h-4" /> AI Behavior Detection
-                                </h3>
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${aiStatus === 'connected' ? 'bg-success-500/20 text-success-400' : aiStatus === 'error' ? 'bg-danger-500/20 text-danger-400' : 'bg-dark-600 text-dark-400'}`}>
-                                    {aiStatus === 'connected' ? 'Connected' : aiStatus === 'error' ? 'Error' : 'Idle'}
+                        <div className="glass rounded-3xl overflow-hidden">
+                            <div className="px-5 py-4 border-b border-dark-200/60 flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-dark-900 flex items-center gap-2"><Shield className="w-4 h-4 text-accent-400" /> Deteksi AI</h3>
+                                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${aiStatus === 'connected' ? 'bg-success-500/15 text-success-500' : aiStatus === 'error' ? 'bg-danger-500/15 text-danger-500' : 'bg-dark-100/70 text-dark-500'}`}>
+                                    {aiStatus === 'connected' ? '● Terhubung' : aiStatus === 'error' ? '● Error' : '○ Siaga'}
                                 </span>
                             </div>
-                            <div className="p-4">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <AiIndicator icon={User} label="Face Detected" active={aiResults.face_detected} />
-                                    <AiIndicator icon={Shield} label="Seatbelt On" active={aiResults.seatbelt} danger={aiResults.seatbelt === false && aiResults.face_detected} />
-                                    <AiIndicator icon={Eye} label="Eyes Open" active={aiResults.eye_closed < 0.5} danger={aiResults.eye_closed >= 0.7} />
-                                    <AiIndicator icon={AlertTriangle} label="No Fatigue" active={!aiResults.fatigue} danger={aiResults.fatigue} />
-                                    <AiIndicator icon={Phone} label="No Phone" active={!aiResults.phone} danger={aiResults.phone} />
-                                    <AiIndicator icon={Navigation} label="Looking Ahead" active={!aiResults.looking_away} danger={aiResults.looking_away} />
+                            <div className="p-5">
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <AiIndicator icon={User} label="Wajah" active={aiResults.face_detected} />
+                                    <AiIndicator icon={Shield} label="Seatbelt" active={aiResults.seatbelt} danger={aiResults.seatbelt === false && aiResults.face_detected} />
+                                    <AiIndicator icon={Eye} label="Mata Terbuka" active={aiResults.eye_closed < 0.5} danger={aiResults.eye_closed >= 0.7} />
+                                    <AiIndicator icon={AlertTriangle} label="Tidak Lelah" active={!aiResults.fatigue} danger={aiResults.fatigue} />
+                                    <AiIndicator icon={Phone} label="Tanpa HP" active={!aiResults.phone} danger={aiResults.phone} />
+                                    <AiIndicator icon={Navigation} label="Fokus Depan" active={!aiResults.looking_away} danger={aiResults.looking_away} />
                                 </div>
-                                <div className="mt-3 pt-3 border-t border-dark-700/50">
-                                    <div className="grid grid-cols-3 gap-2 text-xs">
-                                        <div><span className="text-dark-400">Eye Closure:</span> <span className="text-dark-200 font-medium">{(aiResults.eye_closed * 100).toFixed(0)}%</span></div>
-                                        <div><span className="text-dark-400">Yaw:</span> <span className="text-dark-200 font-medium">{aiResults.head_pose?.yaw?.toFixed(0) || 0}°</span></div>
-                                        <div><span className="text-dark-400">Pitch:</span> <span className="text-dark-200 font-medium">{aiResults.head_pose?.pitch?.toFixed(0) || 0}°</span></div>
-                                    </div>
+                                <div className="mt-4 pt-4 border-t border-dark-200/60 grid grid-cols-3 gap-2 text-xs">
+                                    <div className="glass rounded-xl px-3 py-2 text-center"><p className="text-dark-500 text-[10px] uppercase font-bold">Mata</p><p className="text-dark-900 font-bold">{(aiResults.eye_closed * 100).toFixed(0)}%</p></div>
+                                    <div className="glass rounded-xl px-3 py-2 text-center"><p className="text-dark-500 text-[10px] uppercase font-bold">Yaw</p><p className="text-dark-900 font-bold">{aiResults.head_pose?.yaw?.toFixed(0) || 0}°</p></div>
+                                    <div className="glass rounded-xl px-3 py-2 text-center"><p className="text-dark-500 text-[10px] uppercase font-bold">Pitch</p><p className="text-dark-900 font-bold">{aiResults.head_pose?.pitch?.toFixed(0) || 0}°</p></div>
                                 </div>
                             </div>
                         </div>
@@ -471,18 +522,32 @@ export default function DriverDashboard() {
 
 function InfoRow({ label, value }) {
     return (
-        <div className="flex justify-between items-center">
-            <span className="text-xs text-dark-400">{label}</span>
-            <span className="text-xs font-medium text-dark-200">{value}</span>
+        <div className="flex justify-between items-center gap-3">
+            <span className="text-xs text-dark-500">{label}</span>
+            <span className="text-xs font-semibold text-dark-800 text-right truncate">{value}</span>
+        </div>
+    );
+}
+
+function InfoMini({ label, value, mono }) {
+    return (
+        <div><p className="text-[10px] uppercase tracking-wider text-dark-500 font-bold">{label}</p><p className={`text-xs font-semibold text-dark-900 ${mono ? 'font-mono' : ''}`}>{value}</p></div>
+    );
+}
+
+function AiMini({ label, ok, warn }) {
+    return (
+        <div className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[11px] font-bold border ${warn ? 'bg-danger-500/10 border-danger-500/30 text-danger-500' : ok ? 'bg-success-500/10 border-success-500/25 text-success-500' : 'bg-dark-100/60 border-dark-200/60 text-dark-500'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${warn ? 'bg-danger-400' : ok ? 'bg-success-400' : 'bg-dark-500'}`} />{label}
         </div>
     );
 }
 
 function AiIndicator({ icon: Icon, label, active, danger }) {
     return (
-        <div className={`flex items-center gap-2 p-2.5 rounded-lg border transition-colors ${danger ? 'bg-danger-500/10 border-danger-500/30' : active ? 'bg-success-500/10 border-success-500/30' : 'bg-dark-700/30 border-dark-600/30'}`}>
-            <Icon className={`w-4 h-4 ${danger ? 'text-danger-400' : active ? 'text-success-400' : 'text-dark-400'}`} />
-            <span className={`text-xs font-medium ${danger ? 'text-danger-400' : active ? 'text-success-400' : 'text-dark-400'}`}>{label}</span>
+        <div className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${danger ? 'bg-danger-500/10 border-danger-500/30 shadow-[0_0_20px_rgba(239,68,68,0.2)]' : active ? 'bg-success-500/10 border-success-500/25' : 'bg-dark-100/60 border-dark-200/60'}`}>
+            <Icon className={`w-4 h-4 flex-shrink-0 ${danger ? 'text-danger-500' : active ? 'text-success-500' : 'text-dark-500'}`} />
+            <span className={`text-xs font-semibold ${danger ? 'text-danger-500' : active ? 'text-success-500' : 'text-dark-500'}`}>{label}</span>
         </div>
     );
 }

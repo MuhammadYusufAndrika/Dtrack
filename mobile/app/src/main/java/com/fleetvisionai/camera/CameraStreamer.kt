@@ -31,7 +31,8 @@ class CameraStreamer(
 ) {
     private var streamingJob: Job? = null
     private var isStreaming = false
-    private var frameIntervalMs = 2000L
+    // 800ms (~1.25 FPS) — seimbang untuk hosting. Jangan <500ms, AI + kuota jebol.
+    private var frameIntervalMs = 800L
     private var latestBitmap: Bitmap? = null
 
     var onStreamingStatus: ((Boolean) -> Unit)? = null
@@ -77,7 +78,12 @@ class CameraStreamer(
     private suspend fun sendFrame(bitmap: Bitmap) {
         try {
             val stream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream)
+            // Downscale ke max 640px + quality 75 biar hemat bandwidth hosting
+            val scaled = if (bitmap.width > 640) {
+                val ratio = 640f / bitmap.width
+                Bitmap.createScaledBitmap(bitmap, 640, (bitmap.height * ratio).toInt(), true)
+            } else bitmap
+            scaled.compress(Bitmap.CompressFormat.JPEG, 75, stream)
             val imageData = stream.toByteArray()
 
             val requestBody = imageData.toRequestBody("image/jpeg".toMediaTypeOrNull())

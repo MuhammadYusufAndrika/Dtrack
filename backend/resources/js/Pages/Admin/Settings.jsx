@@ -1,20 +1,24 @@
 import AdminLayout from '../../Layouts/AdminLayout';
-import { Settings as SettingsIcon, User, Bell, Shield } from 'lucide-react';
+import PageHeader from '../../Components/PageHeader';
+import { Settings as SettingsIcon, User, Bell, Shield, ChevronRight } from 'lucide-react';
 
 export default function Settings() {
     return (
         <AdminLayout>
             <div className="space-y-6">
-                <div><h1 className="text-2xl font-bold text-dark-50">Settings</h1><p className="text-sm text-dark-400 mt-1">Manage your account and preferences</p></div>
-                <div className="space-y-4">
+                <PageHeader eyebrow="Preferences" title="Pengaturan" description="Kelola akun, notifikasi, dan keamanan." />
+                <div className="grid sm:grid-cols-3 gap-4">
                     {[
-                        { icon: User, title: 'Profile', desc: 'Update your personal information' },
-                        { icon: Bell, title: 'Notifications', desc: 'Configure alert preferences' },
-                        { icon: Shield, title: 'Security', desc: 'Password and authentication settings' },
-                    ].map(({ icon: Icon, title, desc }) => (
-                        <div key={title} className="rounded-xl bg-dark-800/50 border border-dark-700/50 p-4 flex items-center gap-4 hover:bg-dark-800 transition-colors cursor-pointer">
-                            <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center"><Icon className="w-5 h-5 text-primary-400" /></div>
-                            <div><p className="text-sm font-semibold text-dark-100">{title}</p><p className="text-xs text-dark-400">{desc}</p></div>
+                        { icon: User, title: 'Profil', desc: 'Data pribadi & akun', grad: 'from-primary-500 to-accent-500' },
+                        { icon: Bell, title: 'Notifikasi', desc: 'Alert & preferensi', grad: 'from-warning-500 to-orange-400' },
+                        { icon: Shield, title: 'Keamanan', desc: 'Password & autentikasi', grad: 'from-success-500 to-emerald-400' },
+                    ].map(({ icon: Icon, title, desc, grad }) => (
+                        <div key={title} className="glass glass-hover rounded-3xl p-5 cursor-pointer group">
+                            <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${grad} flex items-center justify-center mb-4`}><Icon className="w-5 h-5 text-white" /></div>
+                            <div className="flex items-center justify-between">
+                                <div><p className="text-sm font-bold text-dark-900">{title}</p><p className="text-xs text-dark-400 mt-0.5">{desc}</p></div>
+                                <ChevronRight className="w-4 h-4 text-dark-500 group-hover:text-dark-900 group-hover:translate-x-0.5 transition-all" />
+                            </div>
                         </div>
                     ))}
                 </div>

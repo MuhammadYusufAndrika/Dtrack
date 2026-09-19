@@ -1,12 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiFetch } from '../../utils/api';
 import AdminLayout from '../../Layouts/AdminLayout';
+import PageHeader from '../../Components/PageHeader';
 import { PageLoader } from '../../Components/LoadingSpinner';
 import StatusBadge from '../../Components/StatusBadge';
 import { User, Truck, Phone, Mail, FileText, Camera, AlertTriangle, Shield, Eye, Navigation, RefreshCw, Link2, Link2Off } from 'lucide-react';
 
-const AI_SERVICE_HOST = window.location.hostname;
-const AI_SERVICE_URL = `http://${AI_SERVICE_HOST}:5000`;
+// Hosting-ready: pakai VITE_AI_SERVICE_URL jika diset, kalau HTTPS pakai /ai (reverse proxy)
+// biar tidak kena mixed-content + firewall port 5000. Fallback ke http://host:5000 untuk local.
+function resolveAiBase() {
+    const envUrl = import.meta.env?.VITE_AI_SERVICE_URL;
+    if (envUrl) return envUrl.replace(/\/$/, '');
+    const { protocol, hostname } = window.location;
+    if (protocol === 'https:') return `https://${hostname}/ai`;
+    return `http://${hostname}:5000`;
+}
+const AI_SERVICE_URL = resolveAiBase();
+const LIVE_POLL_MS = Number(import.meta.env?.VITE_LIVE_POLL_MS) || 600;
 
 const AI_INITIAL = { face_detected: false, seatbelt: false, fatigue: false, phone: false, looking_away: false, eye_closed: 0, head_pose: { yaw: 0, pitch: 0, roll: 0 } };
 
@@ -42,6 +52,8 @@ export default function DriversShow({ id }) {
     const [cameraError, setCameraError] = useState('');
     const frameInterval = useRef(null);
     const cameraFrameUrl = useRef(null);
+    const isFetchingFrame = useRef(false);
+    const pollCount = useRef(0);
 
     const reloadDriver = useCallback(() => {
         return apiFetch(`/api/drivers/${id}`)
@@ -105,42 +117,67 @@ export default function DriversShow({ id }) {
 
     const fetchFrame = useCallback(async () => {
         if (!driver?.vehicle?.vehicle_id) return;
+        // Jangan tumpuk request kalau network lambat (penyebab patah di hosting)
+        if (isFetchingFrame.current) return;
+        // Hemat bandwidth saat tab tidak terlihat
+        if (document.hidden) return;
+        isFetchingFrame.current = true;
         const key = driver.vehicle.vehicle_id;
         try {
-            const res = await fetch(`${AI_SERVICE_URL}/inference/frame/${key}`);
+            const res = await fetch(`${AI_SERVICE_URL}/inference/frame/${key}`, { cache: 'no-store' });
             if (res.ok) {
+                // Ambil AI result dari header (1 RTT saja, tanpa fetch /frames tiap tick)
+                const headerResult = res.headers.get('X-AI-Result');
+                if (headerResult) {
+                    try {
+                        setAiResult(mapStatusToAiResult(JSON.parse(headerResult)));
+                    } catch {}
+                }
                 const blob = await res.blob();
                 const url = URL.createObjectURL(blob);
-                if (cameraFrameUrl.current) URL.revokeObjectURL(cameraFrameUrl.current);
-                cameraFrameUrl.current = url;
-                setCameraFrame(url);
+                // Preload dulu baru swap — hilangkan kedip / frame hitam
+                const img = new Image();
+                img.onload = () => {
+                    if (cameraFrameUrl.current) URL.revokeObjectURL(cameraFrameUrl.current);
+                    cameraFrameUrl.current = url;
+                    setCameraFrame(url);
+                };
+                img.onerror = () => URL.revokeObjectURL(url);
+                img.src = url;
                 setCameraError('');
 
-                // Also pull AI result from the frames endpoint (fallback for when
-                // WebSocket broadcast is not yet available)
-                const framesRes = await fetch(`${AI_SERVICE_URL}/inference/frames`);
-                if (framesRes.ok) {
-                    const data = await framesRes.json();
-                    const vResult = data.vehicles?.[key];
-                    if (vResult?.result) {
-                        setAiResult(mapStatusToAiResult(vResult.result));
-                    }
+                // Fallback /frames cukup tiap ~3 detik (tiap 5 tick), bukan tiap frame
+                pollCount.current += 1;
+                if (!headerResult && pollCount.current % 5 === 0) {
+                    try {
+                        const framesRes = await fetch(`${AI_SERVICE_URL}/inference/frames`, { cache: 'no-store' });
+                        if (framesRes.ok) {
+                            const data = await framesRes.json();
+                            const vResult = data.vehicles?.[key];
+                            if (vResult?.result) setAiResult(mapStatusToAiResult(vResult.result));
+                        }
+                    } catch {}
                 }
             } else if (res.status === 404) {
                 setCameraError('No live camera feed available');
             }
         } catch {
             setCameraError('AI service unreachable');
+        } finally {
+            isFetchingFrame.current = false;
         }
     }, [driver?.vehicle?.vehicle_id]);
 
     useEffect(() => {
         if (!driver?.vehicle?.vehicle_id) return;
         fetchFrame();
-        frameInterval.current = setInterval(fetchFrame, 2000);
+        frameInterval.current = setInterval(fetchFrame, LIVE_POLL_MS);
         return () => {
             if (frameInterval.current) clearInterval(frameInterval.current);
-            if (cameraFrameUrl.current) URL.revokeObjectURL(cameraFrameUrl.current);
+            if (cameraFrameUrl.current) {
+                URL.revokeObjectURL(cameraFrameUrl.current);
+                cameraFrameUrl.current = null;
+            }
         };
     }, [driver?.vehicle?.vehicle_id, fetchFrame]);
 
@@ -150,10 +187,12 @@ export default function DriversShow({ id }) {
     return (
         <AdminLayout>
             <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center"><User className="w-7 h-7 text-white" /></div>
-                    <div><h1 className="text-2xl font-bold text-dark-50">{driver.name}</h1><StatusBadge status={driver.status} /></div>
-                </div>
+                <PageHeader
+                    eyebrow="Driver Detail"
+                    title={driver.name}
+                    description={`${driver.email} — ${driver.vehicle?.plate_number || 'belum ada unit'}.`}
+                    action={<StatusBadge status={driver.status} />}
+                />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <InfoBox icon={Mail} label="Email" value={driver.email} />
                     <InfoBox icon={Phone} label="Phone" value={driver.phone} />
@@ -162,19 +201,19 @@ export default function DriversShow({ id }) {
                 </div>
 
                 {/* Vehicle Assignment Panel */}
-                <div className="rounded-xl bg-dark-800/50 border border-dark-700/50 p-4">
+                <div className="glass rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-3">
-                        <Link2 className="w-4 h-4 text-primary-400" />
-                        <h3 className="text-sm font-semibold text-dark-100">Vehicle Assignment</h3>
+                        <Link2 className="w-4 h-4 text-primary-600" />
+                        <h3 className="text-sm font-bold text-dark-900">Vehicle Assignment</h3>
                         {driver.vehicle && (
-                            <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-success-500/20 text-success-400">
+                            <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-success-500/15 text-success-500">
                                 Assigned: {driver.vehicle.plate_number}
                             </span>
                         )}
                     </div>
 
                     {assignError && (
-                        <p className="text-xs text-danger-400 mb-2">{assignError}</p>
+                        <p className="text-xs text-danger-500 mb-2">{assignError}</p>
                     )}
 
                     <div className="flex flex-wrap items-center gap-3">
@@ -182,7 +221,7 @@ export default function DriversShow({ id }) {
                             id="vehicle-assign-select"
                             value={selectedVehicleId}
                             onChange={(e) => setSelectedVehicleId(e.target.value)}
-                            className="flex-1 min-w-[180px] rounded-lg bg-dark-700 border border-dark-600 text-dark-100 text-sm px-3 py-2 focus:outline-none focus:border-primary-500"
+                            className="flex-1 min-w-[180px] rounded-xl bg-white border border-dark-200 text-dark-900 text-sm px-3 py-2 focus:outline-none focus:border-primary-500"
                         >
                             <option value="">— Select a vehicle —</option>
                             {vehicles.map((v) => (
@@ -212,7 +251,7 @@ export default function DriversShow({ id }) {
                                 id="btn-unassign-vehicle"
                                 onClick={() => handleAssign(null)}
                                 disabled={assigning}
-                                className="px-4 py-2 rounded-lg bg-dark-600 hover:bg-dark-500 disabled:opacity-40 text-dark-300 hover:text-white text-sm font-medium transition-colors flex items-center gap-2"
+                                className="px-4 py-2 rounded-xl bg-dark-100 hover:bg-dark-200 disabled:opacity-40 text-dark-600 hover:text-dark-900 text-sm font-semibold transition-colors flex items-center gap-2"
                             >
                                 <Link2Off className="w-3.5 h-3.5" />
                                 Unassign
@@ -224,16 +263,16 @@ export default function DriversShow({ id }) {
                 {/* Live Camera + AI Behavior Detection Panel */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Camera Feed */}
-                    <div className="rounded-xl bg-dark-800/50 border border-dark-700/50 overflow-hidden">
-                        <div className="p-4 border-b border-dark-700/50 flex items-center justify-between">
-                            <h3 className="text-sm font-semibold text-dark-100 flex items-center gap-2">
+                    <div className="glass rounded-3xl overflow-hidden">
+                        <div className="p-4 border-b border-dark-200/60 flex items-center justify-between">
+                            <h3 className="text-sm font-bold text-dark-900 flex items-center gap-2">
                                 <Camera className="w-4 h-4" /> Live Camera
                             </h3>
-                            <button onClick={fetchFrame} className="text-dark-400 hover:text-dark-200 transition-colors">
+                            <button onClick={fetchFrame} className="text-dark-400 hover:text-dark-900 transition-colors">
                                 <RefreshCw className="w-4 h-4" />
                             </button>
                         </div>
-                        <div className="relative bg-dark-900" style={{ minHeight: '240px' }}>
+                        <div className="relative bg-dark-100/50" style={{ minHeight: '240px' }}>
                             {!driver.vehicle ? (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                                     <Truck className="w-8 h-8 text-dark-600" />
@@ -250,12 +289,12 @@ export default function DriversShow({ id }) {
                     </div>
 
                     {/* AI Detection Results */}
-                    <div className="rounded-xl bg-dark-800/50 border border-dark-700/50 overflow-hidden">
-                        <div className="p-4 border-b border-dark-700/50 flex items-center justify-between">
-                            <h3 className="text-sm font-semibold text-dark-100 flex items-center gap-2">
+                    <div className="glass rounded-3xl overflow-hidden">
+                        <div className="p-4 border-b border-dark-200/60 flex items-center justify-between">
+                            <h3 className="text-sm font-bold text-dark-900 flex items-center gap-2">
                                 <AlertTriangle className="w-4 h-4" /> AI Behavior Detection
                             </h3>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${aiResult ? 'bg-success-500/20 text-success-400' : 'bg-dark-600 text-dark-400'}`}>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${aiResult ? 'bg-success-500/15 text-success-500' : 'bg-dark-100 text-dark-500'}`}>
                                 {aiResult ? 'Live' : 'No Data'}
                             </span>
                         </div>
@@ -270,11 +309,11 @@ export default function DriversShow({ id }) {
                                         <AiIndicator icon={Phone} label="No Phone" active={!aiResult.phone} danger={aiResult.phone} />
                                         <AiIndicator icon={Navigation} label="Looking Ahead" active={!aiResult.looking_away} danger={aiResult.looking_away} />
                                     </div>
-                                    <div className="mt-3 pt-3 border-t border-dark-700/50">
+                                    <div className="mt-3 pt-3 border-t border-dark-200/60">
                                         <div className="grid grid-cols-3 gap-2 text-xs">
-                                            <div><span className="text-dark-400">Eye Closure:</span> <span className="text-dark-200 font-medium">{((aiResult.eye_closed || 0) * 100).toFixed(0)}%</span></div>
-                                            <div><span className="text-dark-400">Yaw:</span> <span className="text-dark-200 font-medium">{aiResult.head_pose?.yaw?.toFixed(0) || 0}°</span></div>
-                                            <div><span className="text-dark-400">Pitch:</span> <span className="text-dark-200 font-medium">{aiResult.head_pose?.pitch?.toFixed(0) || 0}°</span></div>
+                                            <div><span className="text-dark-400">Eye Closure:</span> <span className="text-dark-800 font-medium">{((aiResult.eye_closed || 0) * 100).toFixed(0)}%</span></div>
+                                            <div><span className="text-dark-400">Yaw:</span> <span className="text-dark-800 font-medium">{aiResult.head_pose?.yaw?.toFixed(0) || 0}°</span></div>
+                                            <div><span className="text-dark-400">Pitch:</span> <span className="text-dark-800 font-medium">{aiResult.head_pose?.pitch?.toFixed(0) || 0}°</span></div>
                                         </div>
                                     </div>
                                 </>
@@ -295,18 +334,18 @@ export default function DriversShow({ id }) {
 
 function InfoBox({ icon: Icon, label, value }) {
     return (
-        <div className="rounded-xl bg-dark-800/50 border border-dark-700/50 p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center"><Icon className="w-5 h-5 text-primary-400" /></div>
-            <div><p className="text-xs text-dark-400">{label}</p><p className="text-sm font-semibold text-dark-100">{value}</p></div>
+        <div className="glass rounded-2xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center"><Icon className="w-5 h-5 text-primary-600" /></div>
+            <div><p className="text-xs text-dark-400">{label}</p><p className="text-sm font-semibold text-dark-900">{value}</p></div>
         </div>
     );
 }
 
 function AiIndicator({ icon: Icon, label, active, danger }) {
     return (
-        <div className={`flex items-center gap-2 p-2.5 rounded-lg border transition-colors ${danger ? 'bg-danger-500/10 border-danger-500/30' : active ? 'bg-success-500/10 border-success-500/30' : 'bg-dark-700/30 border-dark-600/30'}`}>
-            <Icon className={`w-4 h-4 ${danger ? 'text-danger-400' : active ? 'text-success-400' : 'text-dark-400'}`} />
-            <span className={`text-xs font-medium ${danger ? 'text-danger-400' : active ? 'text-success-400' : 'text-dark-400'}`}>{label}</span>
+        <div className={`flex items-center gap-2 p-2.5 rounded-lg border transition-colors ${danger ? 'bg-danger-500/10 border-danger-500/30' : active ? 'bg-success-500/10 border-success-500/30' : 'bg-dark-100/60 border-dark-200/60'}`}>
+            <Icon className={`w-4 h-4 ${danger ? 'text-danger-500' : active ? 'text-success-500' : 'text-dark-400'}`} />
+            <span className={`text-xs font-medium ${danger ? 'text-danger-500' : active ? 'text-success-500' : 'text-dark-400'}`}>{label}</span>
         </div>
     );
 }

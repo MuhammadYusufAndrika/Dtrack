@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title inertia>{{ config('app.name', 'FleetVision AI') }}</title>
     <meta name="description" content="FleetVision AI — real-time fleet tracking & driver monitoring.">
-    <meta name="theme-color" content="#0a0e16">
+    <meta name="theme-color" content="#ffffff">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,7 +18,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
     @inertiaHead
 </head>
-<body class="antialiased bg-dark-950 text-dark-100">
+<body class="antialiased bg-[#edf1f7] text-dark-600">
     @inertia
     <script>
         if ('serviceWorker' in navigator) {

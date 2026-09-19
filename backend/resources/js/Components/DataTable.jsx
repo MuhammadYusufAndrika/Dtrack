@@ -36,18 +36,19 @@ export default function DataTable({ columns, data, keyExtractor, searchable, sea
         <div className="space-y-4">
             {searchable && (
                 <div className="relative max-w-xs">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
                     <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }}
                         placeholder={searchPlaceholder || 'Search...'}
-                        className="w-full bg-dark-800 border border-dark-700 rounded-lg pl-10 pr-4 py-2 text-sm text-dark-100 placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500/50 transition-all" />
+                        className="input-glass w-full rounded-xl pl-10 pr-4 py-2.5 text-sm text-dark-900 placeholder-dark-300" />
                 </div>
             )}
-            <div className="overflow-x-auto rounded-xl border border-dark-700/50">
+            <div className="glass rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
                 <table className="w-full">
                     <thead>
-                        <tr className="border-b border-dark-700/50 bg-dark-800/30">
+                        <tr className="border-b border-dark-200/60 bg-dark-100/50">
                             {columns.map((col) => (
-                                <th key={col.key} className={`px-4 py-3 text-left text-xs font-semibold text-dark-400 uppercase tracking-wider ${col.sortable ? 'cursor-pointer hover:text-dark-200 select-none' : ''}`}
+                                <th key={col.key} className={`px-5 py-3.5 text-left text-[11px] font-bold text-dark-400 uppercase tracking-wider ${col.sortable ? 'cursor-pointer hover:text-dark-900 select-none' : ''}`}
                                     onClick={() => {
                                         if (!col.sortable) return;
                                         if (sortKey === col.key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -61,27 +62,31 @@ export default function DataTable({ columns, data, keyExtractor, searchable, sea
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-dark-700/30">
+                    <tbody className="divide-y divide-dark-200/50">
                         {paged.map((row) => (
-                            <tr key={keyExtractor(row)} className="hover:bg-dark-700/20 transition-colors">
+                            <tr key={keyExtractor(row)} className="hover:bg-primary-500/[0.05] transition-colors group">
                                 {columns.map((col) => (
-                                    <td key={col.key} className="px-4 py-3 text-sm">{col.render ? col.render(row) : <span className="text-dark-200">{String(row[col.key] ?? '')}</span>}</td>
+                                    <td key={col.key} className="px-5 py-3.5 text-sm">{col.render ? col.render(row) : <span className="text-dark-600">{String(row[col.key] ?? '')}</span>}</td>
                                 ))}
                             </tr>
                         ))}
                         {paged.length === 0 && (
-                            <tr><td colSpan={columns.length} className="px-4 py-12 text-center text-dark-400 text-sm">No data</td></tr>
+                            <tr><td colSpan={columns.length} className="px-4 py-14 text-center">
+                                <p className="text-3xl mb-2">📭</p>
+                                <p className="text-dark-400 text-sm">Tidak ada data</p>
+                            </td></tr>
                         )}
                     </tbody>
                 </table>
             </div>
+            </div>
             {pages > 1 && (
-                <div className="flex items-center justify-between text-sm text-dark-400">
-                    <span>{sorted.length} total</span>
-                    <div className="flex gap-1">
+                <div className="flex items-center justify-between text-sm text-dark-400 px-1">
+                    <span className="text-xs">{sorted.length} total</span>
+                    <div className="flex gap-1.5">
                         {Array.from({ length: pages }, (_, i) => (
                             <button key={i} onClick={() => setPage(i)}
-                                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${page === i ? 'bg-primary-600 text-white' : 'bg-dark-800 text-dark-400 hover:text-dark-200'}`}>
+                                className={`min-w-8 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${page === i ? 'btn-glow text-white' : 'glass text-dark-400 hover:text-dark-900'}`}>
                                 {i + 1}
                             </button>
                         ))}

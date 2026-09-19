@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import DriverLayout from '../../Layouts/DriverLayout';
+import PageHeader from '../../Components/PageHeader';
+import { Route } from 'lucide-react';
 
 export default function DriverTrips() {
     const [trips, setTrips] = useState([]);
@@ -32,20 +34,23 @@ export default function DriverTrips() {
 
     return (
         <DriverLayout>
-            <div>
-                <h1 className="text-2xl font-bold text-dark-50 mb-6">My Trips</h1>
+            <div className="space-y-5">
+                <PageHeader eyebrow="Riwayat" title="Trip Saya" description={`${trips.length} perjalanan.`} />
                 {trips.length === 0 ? (
-                    <p className="text-dark-400">No trips found.</p>
+                    <div className="glass rounded-3xl text-center py-14"><p className="text-4xl mb-3">🛣️</p><p className="text-dark-900 font-semibold">Belum ada trip</p><p className="text-dark-500 text-sm mt-1">Mulai trip pertama dari dashboard.</p></div>
                 ) : (
                     <div className="space-y-3">
                         {trips.map((t) => (
-                            <div key={t.id} className="rounded-xl bg-dark-800/50 border border-dark-700/50 p-4">
-                                <p className="text-sm font-medium text-dark-100">{t.origin || '—'} → {t.destination || '—'}</p>
-                                <p className="text-xs text-dark-400 mt-1">
-                                    {t.start_time ? new Date(t.start_time).toLocaleString() : '—'}
-                                    {t.end_time ? ` — ${new Date(t.end_time).toLocaleString()}` : ''}
+                            <div key={t.id} className="glass glass-hover rounded-2xl p-4 flex items-center gap-4">
+                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-success-500 to-accent-500 flex items-center justify-center flex-shrink-0"><Route className="w-5 h-5 text-white" /></div>
+                                <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold text-dark-900">{t.origin || '—'} → {t.destination || '—'}</p>
+                                <p className="text-xs text-dark-400 mt-0.5">
+                                    {t.start_time ? new Date(t.start_time).toLocaleString('id-ID') : '—'}
+                                    {t.end_time ? ` — ${new Date(t.end_time).toLocaleString('id-ID')}` : ''}
                                 </p>
-                                {t.distance_km != null && <p className="text-xs text-dark-400 mt-0.5">{t.distance_km} km</p>}
+                                </div>
+                                {t.distance_km != null && <span className="text-xs font-bold font-mono text-primary-600 flex-shrink-0">{t.distance_km} km</span>}
                             </div>
                         ))}
                     </div>
