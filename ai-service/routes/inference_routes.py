@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import cv2
@@ -168,6 +169,15 @@ async def inference_websocket(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_json()
+            # Drain: driver kirim tiap 500ms tapi inference (YOLO+MediaPipe) butuh
+            # ~1 detik di CPU — tanpa ini antrean WS tumbuh tanpa batas dan admin
+            # melihat gambar basi yang menumpuk (makin lama makin patah).
+            # Buang yang basi, proses hanya frame terbaru.
+            while True:
+                try:
+                    data = await asyncio.wait_for(websocket.receive_json(), timeout=0.02)
+                except asyncio.TimeoutError:
+                    break
             frame_b64 = data.get("frame", "")
             vehicle_id = data.get("vehicle_id", "unknown")
 

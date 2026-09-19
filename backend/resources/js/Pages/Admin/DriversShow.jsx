@@ -148,7 +148,7 @@ export default function DriversShow({ id }) {
 
                 // Fallback /frames cukup tiap ~3 detik (tiap 5 tick), bukan tiap frame
                 pollCount.current += 1;
-                if (!headerResult && pollCount.current % 5 === 0) {
+                if (!headerResult && pollCount.current % 3 === 0) {
                     try {
                         const framesRes = await fetch(`${AI_SERVICE_URL}/inference/frames`, { cache: 'no-store' });
                         if (framesRes.ok) {

@@ -127,7 +127,7 @@ export default function DriverDashboard() {
                     await fetch('/api/location', {
                         method: 'POST',
                         headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-                        body: JSON.stringify({ vehicle_id: driver.vehicle.id, latitude: gpsPos.lat, longitude: gpsPos.lng, speed: Math.round(gpsPos.speed), heading: Math.round(gpsPos.heading), accuracy: Math.round(gpsPos.accuracy) }),
+                        body: JSON.stringify({ vehicle_id: driver.vehicle.id, latitude: gpsPos.lat, longitude: gpsPos.lng, speed: Math.round(gpsPos.speed * 3.6), heading: Math.round(gpsPos.heading), accuracy: Math.round(gpsPos.accuracy) }),
                     });
                 } catch {}
             }, 5000);
@@ -235,9 +235,10 @@ export default function DriverDashboard() {
 
     const captureAndSendFrame = useCallback((stream) => {
         if (!videoRef.current || !canvasRef.current || !aiWsRef.current || aiWsRef.current.readyState !== WebSocket.OPEN) return;
-        // Backpressure: skip frame kalau WS masih antre >1MB (cegah delay menumpuk di hosting)
+        // Backpressure: skip frame kalau WS masih antre >256KB (cegah delay menumpuk;
+        // inference ~1 detik sedangkan kirim tiap 500ms — antrean bikin tayangan basi)
         try {
-            if (aiWsRef.current.bufferedAmount > 1024 * 1024) return;
+            if (aiWsRef.current.bufferedAmount > 256 * 1024) return;
         } catch {}
 
         const video = videoRef.current;

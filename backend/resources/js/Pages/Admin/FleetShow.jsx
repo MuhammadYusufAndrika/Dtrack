@@ -18,6 +18,20 @@ function resolveAiBase() {
 const AI_SERVICE_URL = resolveAiBase();
 const LIVE_POLL_MS = Number(import.meta.env?.VITE_LIVE_POLL_MS) || 600;
 
+// Samakan bentuk payload ai-service (phone) dengan backend Laravel (phone_usage)
+function normalizeAiResult(r) {
+    if (!r) return null;
+    return {
+        face_detected: r.face_detected ?? true,
+        seatbelt:      r.seatbelt      ?? true,
+        fatigue:       r.fatigue       ?? false,
+        phone:         r.phone         ?? r.phone_usage ?? false,
+        looking_away:  r.looking_away  ?? false,
+        eye_closed:    r.eye_closed    ?? 0,
+        head_pose:     r.head_pose     ?? { yaw: 0, pitch: 0, roll: 0 },
+    };
+}
+
 const vehicleIcon = L.divIcon({ className: '', html: '<div style="width:32px;height:32px;background:#3b82f6;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-size:14px;">🚛</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
 
 export default function FleetShow({ id }) {
@@ -54,7 +68,7 @@ export default function FleetShow({ id }) {
                 const headerResult = res.headers.get('X-AI-Result');
                 if (headerResult) {
                     try {
-                        setAiResult(JSON.parse(headerResult));
+                        setAiResult(normalizeAiResult(JSON.parse(headerResult)));
                     } catch {}
                 }
                 const blob = await res.blob();
@@ -70,13 +84,13 @@ export default function FleetShow({ id }) {
                 setCameraError('');
 
                 pollCount.current += 1;
-                if (!headerResult && pollCount.current % 5 === 0) {
+                if (!headerResult && pollCount.current % 3 === 0) {
                     try {
                         const framesRes = await fetch(`${AI_SERVICE_URL}/inference/frames`, { cache: 'no-store' });
                         if (framesRes.ok) {
                             const data = await framesRes.json();
                             const vResult = data.vehicles?.[key];
-                            if (vResult?.result) setAiResult(vResult.result);
+                            if (vResult?.result) setAiResult(normalizeAiResult(vResult.result));
                         }
                     } catch {}
                 }

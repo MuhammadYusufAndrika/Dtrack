@@ -108,12 +108,15 @@ app = FastAPI(
 )
 
 # CORS middleware — allow all origins for development
+# expose_headers WAJIB: tanpa ini browser memblokir JS membaca X-AI-Result
+# sehingga panel AI Behavior di admin selalu "No Data".
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-AI-Result", "X-Timestamp", "X-Age-Seconds", "X-Vehicle-ID"],
 )
 
 # Mount routers
