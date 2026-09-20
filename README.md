@@ -14,7 +14,7 @@ Platform fleet management berbasis AI untuk monitoring kendaraan logistik secara
 | **Driver Dashboard** | Start/End Trip, GPS tracking, live speed & distance dari browser |
 | **Role-Based Access** | Admin (full dashboard) vs Driver (data sendiri) |
 | **Fleet Dashboard** | Map semua kendaraan, statistik, daftar driver & trips |
-| **AI Monitoring** | Deteksi seatbelt, fatigue, phone usage, distraction |
+| **AI Monitoring** | Deteksi seatbelt, smoking, phone usage, distraction |
 | **Alert System** | Notifikasi real-time untuk admin |
 
 ---
@@ -267,7 +267,7 @@ dtrack/
 |----------|-----------|--------|
 | **FaceDetector** | MediaPipe Face Detection | `face_detected`, `face_bbox` |
 | **SeatbeltDetector** | MediaPipe Pose | `seatbelt` (bool) |
-| **FatigueDetector** | MediaPipe Face Mesh | `fatigue`, `eye_closed`, `yawning`, `ear`, `mar`, `perclos` |
+| **SmokeDetector** | MediaPipe Pose + Face Mesh (heuristik tangan-di-mulut) | `smoking`, `confidence`, `hand_near_mouth` |
 | **PhoneDetector** | YOLOv8n | `phone` (bool), `confidence` |
 | **DistractionDetector** | Head Pose (solvePnP) | `looking_away`, `yaw`, `pitch`, `roll` |
 

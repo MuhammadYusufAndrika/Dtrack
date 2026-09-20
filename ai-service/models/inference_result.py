@@ -7,10 +7,8 @@ class InferenceResult(BaseModel):
     vehicle_id: str          # String identifier used as frame-store key
     vehicle_db_id: Optional[int] = None  # Integer DB id for Laravel POST /ai/result
     seatbelt: bool
-    fatigue: bool
+    smoking: bool
     phone: bool
-    eye_closed: float
-    yawning: bool
     looking_away: bool
     face_detected: bool
     timestamp: datetime

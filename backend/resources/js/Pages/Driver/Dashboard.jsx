@@ -5,7 +5,7 @@ import PageHeader from '../../Components/PageHeader';
 import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
 import MapTiles from '../../Components/MapTiles';
 import L from 'leaflet';
-import { Truck, Route, Activity, Clock, MapPin, Navigation, Play, Square, Camera, AlertTriangle, Shield, Eye, Phone, User } from 'lucide-react';
+import { Truck, Route, Activity, Clock, MapPin, Navigation, Play, Square, Camera, Shield, Cigarette, Phone, User } from 'lucide-react';
 
 function resolveAiHttp() {
     const envUrl = import.meta.env?.VITE_AI_SERVICE_URL;
@@ -44,7 +44,7 @@ function MapUpdater({ position }) {
     return null;
 }
 
-const AI_INITIAL = { face_detected: false, seatbelt: false, fatigue: false, phone: false, looking_away: false, eye_closed: 0, head_pose: { yaw: 0, pitch: 0, roll: 0 } };
+const AI_INITIAL = { face_detected: false, seatbelt: false, smoking: false, phone: false, looking_away: false, head_pose: { yaw: 0, pitch: 0, roll: 0 } };
 
 export default function DriverDashboard() {
     const [driver, setDriver] = useState(null);
@@ -460,7 +460,7 @@ export default function DriverDashboard() {
                                     <div className="grid grid-cols-2 gap-2">
                                         <AiMini label="Seatbelt" ok={aiResults.seatbelt} warn={aiResults.face_detected && !aiResults.seatbelt} />
                                         <AiMini label="Fokus" ok={!aiResults.looking_away} warn={aiResults.looking_away} />
-                                        <AiMini label="Segar" ok={!aiResults.fatigue} warn={aiResults.fatigue} />
+                                        <AiMini label="No Rokok" ok={!aiResults.smoking} warn={aiResults.smoking} />
                                         <AiMini label="No HP" ok={!aiResults.phone} warn={aiResults.phone} />
                                     </div>
                                 </div>
@@ -502,13 +502,12 @@ export default function DriverDashboard() {
                                 <div className="grid grid-cols-2 gap-2.5">
                                     <AiIndicator icon={User} label="Wajah" active={aiResults.face_detected} />
                                     <AiIndicator icon={Shield} label="Seatbelt" active={aiResults.seatbelt} danger={aiResults.seatbelt === false && aiResults.face_detected} />
-                                    <AiIndicator icon={Eye} label="Mata Terbuka" active={aiResults.eye_closed < 0.5} danger={aiResults.eye_closed >= 0.7} />
-                                    <AiIndicator icon={AlertTriangle} label="Tidak Lelah" active={!aiResults.fatigue} danger={aiResults.fatigue} />
+                                    <AiIndicator icon={Cigarette} label="Tanpa Rokok" active={!aiResults.smoking} danger={aiResults.smoking} />
                                     <AiIndicator icon={Phone} label="Tanpa HP" active={!aiResults.phone} danger={aiResults.phone} />
                                     <AiIndicator icon={Navigation} label="Fokus Depan" active={!aiResults.looking_away} danger={aiResults.looking_away} />
                                 </div>
                                 <div className="mt-4 pt-4 border-t border-dark-200/60 grid grid-cols-3 gap-2 text-xs">
-                                    <div className="glass rounded-xl px-3 py-2 text-center"><p className="text-dark-500 text-[10px] uppercase font-bold">Mata</p><p className="text-dark-900 font-bold">{(aiResults.eye_closed * 100).toFixed(0)}%</p></div>
+                                    <div className="glass rounded-xl px-3 py-2 text-center"><p className="text-dark-500 text-[10px] uppercase font-bold">Rokok</p><p className="text-dark-900 font-bold">{aiResults.smoking ? 'Ya' : 'Tidak'}</p></div>
                                     <div className="glass rounded-xl px-3 py-2 text-center"><p className="text-dark-500 text-[10px] uppercase font-bold">Yaw</p><p className="text-dark-900 font-bold">{aiResults.head_pose?.yaw?.toFixed(0) || 0}°</p></div>
                                     <div className="glass rounded-xl px-3 py-2 text-center"><p className="text-dark-500 text-[10px] uppercase font-bold">Pitch</p><p className="text-dark-900 font-bold">{aiResults.head_pose?.pitch?.toFixed(0) || 0}°</p></div>
                                 </div>

@@ -1,7 +1,6 @@
 import numpy as np
 from datetime import datetime
 from typing import Dict, Optional
-from collections import deque
 
 from models.inference_result import InferenceResult
 from detectors import BaseDetector
@@ -16,27 +15,18 @@ class DetectionService:
     1. Takes all initialized detectors as dependencies
     2. Preprocesses each frame before passing to detectors
     3. Runs each detector and collects results
-    4. Applies temporal smoothing (running average) to eye_closed values
-    5. Constructs and returns a complete InferenceResult
+    4. Constructs and returns a complete InferenceResult
 
     The aggregation logic:
     - seatbelt: from seatbelt detector OR logic
-    - fatigue: from fatigue detector (PERCLOS-based)
+    - smoking: from smoke detector (hand-to-mouth gesture)
     - phone: from phone detector with confidence threshold
-    - eye_closed: smoothed running average over N frames
-    - yawning: from fatigue detector MAR
     - looking_away: from distraction detector head pose
     - face_detected: from face detector
     """
 
-    # Smoothing window for eye_closed value (frames)
-    EYE_CLOSED_SMOOTHING = 5
-
     def __init__(self, detectors: Dict[str, BaseDetector]):
         self.detectors = detectors
-        self._eye_closed_history = deque(
-            maxlen=self.EYE_CLOSED_SMOOTHING
-        )
 
     def process_frame(self, frame: np.ndarray) -> InferenceResult:
         """
@@ -44,7 +34,7 @@ class DetectionService:
 
         Pipeline:
         1. Run face detector (fast, gates other detectors)
-        2. Run fatigue detector (face mesh-based)
+        2. Run smoking detector (hand-to-mouth gesture)
         3. Run distraction detector (head pose from face mesh)
         4. Run seatbelt detector (pose-based)
         5. Run phone detector (YOLO-based)
@@ -62,8 +52,8 @@ class DetectionService:
             # Run face detection first — it's fast and gates downstream detectors
             face_result = self._run_detector("face", frame)
 
-            # Run fatigue detector (includes face mesh for EAR/MAR)
-            fatigue_result = self._run_detector("fatigue", frame)
+            # Run smoking detector (hand-to-mouth gesture)
+            smoking_result = self._run_detector("smoking", frame)
 
             # Run distraction detector (head pose from face mesh)
             distraction_result = self._run_detector("distraction", frame)
@@ -74,27 +64,13 @@ class DetectionService:
             # Run phone detector (YOLO, works without face)
             phone_result = self._run_detector("phone", frame)
 
-            # Aggregate eye_closed with running average smoothing
-            current_eye_closed = fatigue_result.get("eye_closed", 0.0)
-            self._eye_closed_history.append(current_eye_closed)
-            smoothed_eye_closed = (
-                sum(self._eye_closed_history) / len(self._eye_closed_history)
-                if self._eye_closed_history
-                else 0.0
-            )
-
             # Build the final inference result
             result = InferenceResult(
                 vehicle_id=settings.VEHICLE_ID,
                 seatbelt=seatbelt_result.get("seatbelt", False),
-                fatigue=fatigue_result.get("fatigue", False),
+                smoking=smoking_result.get("smoking", False),
                 phone=phone_result.get("phone", False),
-                eye_closed=round(smoothed_eye_closed, 2),
-                yawning=fatigue_result.get("yawning", False),
-                looking_away=(
-                    distraction_result.get("looking_away", False)
-                    or fatigue_result.get("looking_away", False)
-                ),
+                looking_away=distraction_result.get("looking_away", False),
                 face_detected=face_result.get("face_detected", False),
                 timestamp=datetime.utcnow(),
             )
@@ -120,10 +96,8 @@ class DetectionService:
         return InferenceResult(
             vehicle_id=settings.VEHICLE_ID,
             seatbelt=False,
-            fatigue=False,
+            smoking=False,
             phone=False,
-            eye_closed=0.0,
-            yawning=False,
             looking_away=False,
             face_detected=False,
             timestamp=datetime.utcnow(),

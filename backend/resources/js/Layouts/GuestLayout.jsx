@@ -30,7 +30,7 @@ export default function GuestLayout({ children }) {
                         <div className="mt-6 space-y-3">
                             {[
                                 { icon: Radar, text: 'Live GPS setiap 5 detik + peta interaktif' },
-                                { icon: ShieldCheck, text: 'AI monitoring: seatbelt, fatigue, phone' },
+                                { icon: ShieldCheck, text: 'AI monitoring: seatbelt, smoking, phone' },
                                 { icon: Navigation, text: 'Trip & alert otomatis untuk admin' },
                             ].map(({ icon: Icon, text }) => (
                                 <div key={text} className="flex items-center gap-3 text-sm text-white/90">

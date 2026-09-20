@@ -6,7 +6,7 @@ import { PageLoader } from '../../Components/LoadingSpinner';
 import { MapContainer, Marker, Popup } from 'react-leaflet';
 import MapTiles from '../../Components/MapTiles';
 import L from 'leaflet';
-import { Camera, AlertTriangle, Shield, Eye, Phone, User, Navigation, RefreshCw } from 'lucide-react';
+import { Camera, AlertTriangle, Shield, Cigarette, Phone, User, Navigation, RefreshCw } from 'lucide-react';
 
 function resolveAiBase() {
     const envUrl = import.meta.env?.VITE_AI_SERVICE_URL;
@@ -24,10 +24,9 @@ function normalizeAiResult(r) {
     return {
         face_detected: r.face_detected ?? true,
         seatbelt:      r.seatbelt      ?? true,
-        fatigue:       r.fatigue       ?? false,
+        smoking:       r.smoking       ?? false,
         phone:         r.phone         ?? r.phone_usage ?? false,
         looking_away:  r.looking_away  ?? false,
-        eye_closed:    r.eye_closed    ?? 0,
         head_pose:     r.head_pose     ?? { yaw: 0, pitch: 0, roll: 0 },
     };
 }
@@ -179,14 +178,13 @@ export default function FleetShow({ id }) {
                                     <div className="grid grid-cols-2 gap-3">
                                         <AiIndicator icon={User} label="Face Detected" active={aiResult.face_detected} />
                                         <AiIndicator icon={Shield} label="Seatbelt On" active={aiResult.seatbelt} danger={!aiResult.seatbelt && aiResult.face_detected} />
-                                        <AiIndicator icon={Eye} label="Eyes Open" active={aiResult.eye_closed < 0.5} danger={aiResult.eye_closed >= 0.7} />
-                                        <AiIndicator icon={AlertTriangle} label="No Fatigue" active={!aiResult.fatigue} danger={aiResult.fatigue} />
+                                        <AiIndicator icon={Cigarette} label="No Smoking" active={!aiResult.smoking} danger={aiResult.smoking} />
                                         <AiIndicator icon={Phone} label="No Phone" active={!aiResult.phone} danger={aiResult.phone} />
                                         <AiIndicator icon={Navigation} label="Looking Ahead" active={!aiResult.looking_away} danger={aiResult.looking_away} />
                                     </div>
                                     <div className="mt-3 pt-3 border-t border-dark-200/60">
                                         <div className="grid grid-cols-3 gap-2 text-xs">
-                                            <div><span className="text-dark-400">Eye Closure:</span> <span className="text-dark-800 font-medium">{((aiResult.eye_closed || 0) * 100).toFixed(0)}%</span></div>
+                                            <div><span className="text-dark-400">Smoking:</span> <span className="text-dark-800 font-medium">{aiResult.smoking ? 'Detected' : 'Clear'}</span></div>
                                             <div><span className="text-dark-400">Yaw:</span> <span className="text-dark-800 font-medium">{aiResult.head_pose?.yaw?.toFixed(0) || 0}°</span></div>
                                             <div><span className="text-dark-400">Pitch:</span> <span className="text-dark-800 font-medium">{aiResult.head_pose?.pitch?.toFixed(0) || 0}°</span></div>
                                         </div>
