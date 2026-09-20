@@ -18,7 +18,6 @@ class StoreAIResultRequest extends FormRequest
             'seatbelt' => 'nullable|boolean',
             'fatigue' => 'nullable|boolean',
             'phone_usage' => 'nullable|boolean',
-            'smoking' => 'nullable|boolean',
             'eye_closed' => 'nullable|numeric|min:0|max:1',
             'yawning' => 'nullable|boolean',
             'looking_away' => 'nullable|boolean',

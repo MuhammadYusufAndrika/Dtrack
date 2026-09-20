@@ -120,8 +120,10 @@ class CommunicationService:
         payload = {
             "vehicle_id": vehicle_int_id,
             "seatbelt": raw.get("seatbelt"),
-            "smoking": raw.get("smoking"),
+            "fatigue": raw.get("fatigue"),
             "phone_usage": raw.get("phone"),   # frontend field 'phone' → DB column 'phone_usage'
+            "eye_closed": raw.get("eye_closed"),
+            "yawning": raw.get("yawning"),
             "looking_away": raw.get("looking_away"),
             "timestamp": raw.get("timestamp"),
         }

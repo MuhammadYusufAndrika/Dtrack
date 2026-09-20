@@ -101,7 +101,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="FleetVision AI Service",
     description="Real-time AI-powered driver monitoring service for fleet management. "
-                "Provides seatbelt, smoking, phone usage, and distraction detection "
+                "Provides seatbelt, fatigue, phone usage, and distraction detection "
                 "using YOLOv8, MediaPipe, and OpenCV.",
     version="1.0.0",
     lifespan=lifespan,
@@ -177,8 +177,9 @@ async def continuous_inference_loop():
             # Log the result at debug level
             logger.debug(
                 f"Inference: seatbelt={result.seatbelt}, "
-                f"smoking={result.smoking}, phone={result.phone}, "
-                f"looking_away={result.looking_away}"
+                f"fatigue={result.fatigue}, phone={result.phone}, "
+                f"looking_away={result.looking_away}, "
+                f"eye_closed={result.eye_closed:.2f}"
             )
 
             # Send to backend

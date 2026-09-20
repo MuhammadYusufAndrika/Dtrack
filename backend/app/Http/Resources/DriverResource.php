@@ -31,7 +31,6 @@ class DriverResource extends JsonResource
                     'seatbelt' => $this->latestStatus->seatbelt,
                     'fatigue' => $this->latestStatus->fatigue,
                     'phone_usage' => $this->latestStatus->phone_usage,
-                    'smoking' => $this->latestStatus->smoking,
                     'eye_closed' => $this->latestStatus->eye_closed,
                     'yawning' => $this->latestStatus->yawning,
                     'looking_away' => $this->latestStatus->looking_away,

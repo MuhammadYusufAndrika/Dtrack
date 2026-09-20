@@ -10,5 +10,4 @@ enum AlertType: string
     case SPEEDING = 'speeding';
     case DRIVING_TIME = 'driving_time';
     case PHONE_USAGE = 'phone_usage';
-    case SMOKING = 'smoking';
 }

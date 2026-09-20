@@ -114,7 +114,7 @@ def draw_info_panel(
     Overlay an information panel on the frame showing all detection results.
 
     The panel is displayed as a semi-transparent overlay in the top-right
-    corner showing driver state: seatbelt, smoking, phone, looking_away flags
+    corner showing driver state: seatbelt, fatigue, phone, looking_away flags
     and their confidence values.
 
     Args:
@@ -146,12 +146,14 @@ def draw_info_panel(
     lines.append(("", True))
     lines.append((f"Seatbelt: {'YES' if inference_result.get('seatbelt') else 'NO'}",
                    inference_result.get('seatbelt', False)))
-    lines.append((f"Smoking: {'YES' if inference_result.get('smoking') else 'NO'}",
-                   not inference_result.get('smoking', False)))
+    lines.append((f"Fatigue: {'YES' if inference_result.get('fatigue') else 'NO'}",
+                   inference_result.get('fatigue', False)))
     lines.append((f"Phone: {'YES' if inference_result.get('phone') else 'NO'}",
                    inference_result.get('phone', False)))
     lines.append((f"Looking Away: {'YES' if inference_result.get('looking_away') else 'NO'}",
                    inference_result.get('looking_away', False)))
+    lines.append((f"Yawning: {'YES' if inference_result.get('yawning') else 'NO'}",
+                   inference_result.get('yawning', False)))
     lines.append(("", True))
     lines.append((f"Face: {'OK' if inference_result.get('face_detected') else 'NONE'}", True))
 
