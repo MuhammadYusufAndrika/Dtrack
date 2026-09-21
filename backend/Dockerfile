@@ -17,6 +17,8 @@ RUN apk add --no-cache \
     git \
     bash \
     mysql-client \
+    linux-headers \
+    $PHPIZE_DEPS \
     && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
         mysqli \
@@ -43,7 +45,7 @@ WORKDIR /var/www
 COPY --chown=www:www . /var/www
 
 # Install dependencies
-RUN composer install --no-interaction --no-ansi --prefer-dist
+RUN composer install --no-interaction --no-ansi --prefer-dist --no-scripts
 
 # Configs
 COPY docker/php.ini $PHP_INI_DIR/conf.d/99-fleetvision.ini

@@ -1,0 +1,79 @@
+services:
+
+  mysql:
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE: fleetvision
+      MYSQL_USER: fleetvision
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
+
+  ai-service:
+    environment:
+      BACKEND_API_URL: https://dtrack.yusufandrika.dev/api
+      BACKEND_API_KEY: "${BACKEND_API_KEY}"
+      REDIS_URL: redis://redis:6379/0
+      STREAM_SOURCE: none
+      INFERENCE_INTERVAL: "0.5"
+      CONFIDENCE_THRESHOLD: "0.5"
+      LOG_LEVEL: INFO
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fleetvision-backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - backend_storage:/var/www/storage
+    restart: unless-stopped
+
+  reverb:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fleetvision-reverb
+    depends_on:
+      - redis
+    env_file:
+      - ./backend/.env
+    command:
+      - php
+      - artisan
+      - reverb:start
+      - --host=0.0.0.0
+      - --port=8080
+    ports:
+      - "127.0.0.1:8081:8080"
+    restart: unless-stopped
+
+  queue-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fleetvision-queue
+    depends_on:
+      - redis
+      - mysql
+    env_file:
+      - ./backend/.env
+    command:
+      - php
+      - artisan
+      - queue:work
+      - --tries=3
+      - --sleep=3
+      - --timeout=120
+    volumes:
+      - backend_storage:/var/www/storage
+    restart: unless-stopped
+
+volumes:
+  backend_storage:

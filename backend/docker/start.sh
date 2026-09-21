@@ -18,11 +18,14 @@ php artisan storage:link --force 2>/dev/null || true
 php artisan migrate --force
 
 # ── Seed database ──
-php artisan db:seed --force 2>/dev/null || true
+# DISABLED PROD: php artisan db:seed --force 2>/dev/null || true
 
 # ── Clear cache (local dev) ──
 php artisan config:clear 2>/dev/null || true
 php artisan route:clear 2>/dev/null || true
+
+# ── Laravel package discovery ──
+php artisan package:discover --ansi
 
 # ── Permissions ──
 chmod -R 775 storage bootstrap/cache
