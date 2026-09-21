@@ -14,18 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-<<<<<<< HEAD
-        // Token-based API (Bearer di localStorage), bukan cookie SPA —
-        // jangan pakai statefulApi() agar POST /api/* tidak kena 419 CSRF.
-        $middleware->trustProxies(at: '*');
-=======
+        // Token-based API (Bearer di localStorage), bukan cookie SPA.
+        // Trust Nginx reverse proxy agar Laravel mengenali HTTPS.
         $middleware->trustProxies(at: '*');
 
-        $middleware->statefulApi();
->>>>>>> dcde8dba25bc5f15138b2ccf493af4ba9ebdad73
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);
+
         $middleware->alias([
             'ai.apikey' => \App\Http\Middleware\CheckAiApiKey::class,
         ]);
