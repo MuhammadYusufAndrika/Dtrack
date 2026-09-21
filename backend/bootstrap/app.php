@@ -14,7 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->statefulApi();
+        // Token-based API (Bearer di localStorage), bukan cookie SPA —
+        // jangan pakai statefulApi() agar POST /api/* tidak kena 419 CSRF.
+        $middleware->trustProxies(at: '*');
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);

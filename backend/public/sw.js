@@ -1,5 +1,5 @@
 /* FleetVision AI Service Worker — cache-first untuk statik, network-first untuk navigasi */
-const CACHE = 'fleetvision-v1';
+const CACHE = 'fleetvision-v2';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE = [
   OFFLINE_URL,
@@ -23,7 +23,14 @@ self.addEventListener('activate', (event) => {
 });
 
 function isBypass(req) {
-  const url = new URL(req.url);
+  let url;
+  try {
+    url = new URL(req.url);
+  } catch {
+    return true;
+  }
+  // Hanya cache http/https — abaikan chrome-extension:, blob:, data:, dll.
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return true;
   // Jangan cache API, websocket, vite HMR, atau method non-GET
   if (req.method !== 'GET') return true;
   if (url.pathname.startsWith('/api')) return true;
@@ -43,7 +50,7 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((res) => {
           const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy));
+          caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
           return res;
         })
         .catch(async () => {
@@ -63,7 +70,7 @@ self.addEventListener('fetch', (event) => {
           // Hanya cache response OK + basic/opaque
           if (res.ok) {
             const copy = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(request, copy));
+            caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
           }
           return res;
         })

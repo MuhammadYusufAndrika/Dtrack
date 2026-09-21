@@ -2456,3 +2456,25 @@
 2026-09-20 10:16:38 | INFO     | app | app:70 | Continuous inference loop skipped (API-only mode)
 2026-09-20 10:16:38 | INFO     | app | app:72 | FleetVision AI Service ready
 2026-09-20 10:16:55 | INFO     | routes.inference_routes | inference_routes:162 | WebSocket client connected
+2026-09-20 10:56:11 | INFO     | routes.inference_routes | inference_routes:213 | WebSocket client disconnected
+2026-09-21 17:32:21 | INFO     | app | app:34 | ============================================================
+2026-09-21 17:32:21 | INFO     | app | app:35 | FleetVision AI Service starting...
+2026-09-21 17:32:21 | INFO     | app | app:36 | ============================================================
+2026-09-21 17:32:21 | INFO     | app | app:37 | STREAM_SOURCE = 'none'
+2026-09-21 17:32:21 | INFO     | app | app:41 | Initializing AI detectors...
+2026-09-21 17:32:22 | INFO     | app | app:43 | Detectors loaded: ['face', 'seatbelt', 'fatigue', 'phone', 'distraction']
+2026-09-21 17:32:22 | INFO     | services.stream_service | stream_service:43 | Stream source set to API-only mode — no local camera opened
+2026-09-21 17:32:22 | WARNING  | app | app:52 | Stream source not available — will accept API/WebSocket frames only
+2026-09-21 17:32:26 | WARNING  | services.communication_service | communication_service:45 | Backend is not reachable — results will be queued locally
+2026-09-21 17:32:26 | INFO     | app | app:70 | Continuous inference loop skipped (API-only mode)
+2026-09-21 17:32:26 | INFO     | app | app:72 | FleetVision AI Service ready
+2026-09-21 19:32:53 | INFO     | routes.inference_routes | inference_routes:162 | WebSocket client connected
+2026-09-21 19:40:09 | INFO     | routes.inference_routes | inference_routes:213 | WebSocket client disconnected
+2026-09-21 19:47:57 | INFO     | routes.inference_routes | inference_routes:162 | WebSocket client connected
+2026-09-21 19:48:01 | INFO     | routes.inference_routes | inference_routes:213 | WebSocket client disconnected
+2026-09-21 19:48:03 | INFO     | routes.inference_routes | inference_routes:162 | WebSocket client connected
+2026-09-21 19:48:25 | INFO     | routes.inference_routes | inference_routes:213 | WebSocket client disconnected
+2026-09-21 20:06:31 | INFO     | routes.inference_routes | inference_routes:162 | WebSocket client connected
+2026-09-21 20:06:41 | INFO     | routes.inference_routes | inference_routes:213 | WebSocket client disconnected
+2026-09-21 20:06:42 | INFO     | routes.inference_routes | inference_routes:162 | WebSocket client connected
+2026-09-21 20:17:08 | INFO     | routes.inference_routes | inference_routes:213 | WebSocket client disconnected
