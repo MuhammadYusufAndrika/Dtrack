@@ -218,7 +218,7 @@ export default function Track() {
                                 Lacak armadamu<br /><span className="text-gradient">secara real-time.</span>
                             </h2>
                             <p className="text-dark-400 mt-4 max-w-md leading-relaxed">
-                                Masukkan nomor plat kendaraan untuk melihat posisi, kecepatan, dan status perjalanan langsung di peta — tanpa perlu login.
+                                Masukkan nomor plat kendaraan untuk melihat posisi, kecepatan, dan status perjalanan langsung di peta tanpa perlu login.
                             </p>
                             <form onSubmit={handleSubmit} className="mt-7">
                                 <div className="glass-strong rounded-2xl p-2 flex flex-col sm:flex-row gap-2 max-w-md shadow-[0_20px_60px_rgba(37,99,235,0.25)]">
