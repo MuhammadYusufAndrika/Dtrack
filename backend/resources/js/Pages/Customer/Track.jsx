@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
 import MapTiles from '../../Components/MapTiles';
 import L from 'leaflet';
-import { Search, Truck, MapPin, Gauge, Clock, ArrowLeft, Loader2, Radar, ShieldCheck, Zap, Navigation } from 'lucide-react';
+import { Search, Truck, MapPin, Gauge, Clock, ArrowLeft, Loader2, Radar, ShieldCheck, Zap, Navigation, LogIn } from 'lucide-react';
 
 const vehicleIcon = L.divIcon({
     className: '',
@@ -193,6 +193,11 @@ export default function Track() {
                                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                                     <span className="hidden sm:inline">Lacak</span>
                                 </button>
+                                <a href="/login" title="Masuk Dashboard"
+                                    className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl glass glass-hover text-dark-900 flex-shrink-0">
+                                    <LogIn className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Masuk</span>
+                                </a>
                             </div>
                         </form>
                     ) : (
@@ -201,7 +206,9 @@ export default function Track() {
                                 <span className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-success-400 animate-pulse' : 'bg-dark-500'}`} />
                                 {wsConnected ? 'Live' : 'Siap'}
                             </span>
-                            <a href="/login" className="hidden sm:inline-flex text-xs font-semibold px-4 py-2 rounded-xl glass glass-hover text-dark-900">Masuk</a>
+                            <a href="/login" className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl glass glass-hover text-dark-900">
+                                <LogIn className="w-4 h-4" /> Masuk
+                            </a>
                         </div>
                     )}
                 </div>
@@ -246,6 +253,13 @@ export default function Track() {
                                         {p}
                                     </button>
                                 ))}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3 mt-6 max-w-md">
+                                <a href="/login"
+                                    className="btn-glow inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white text-sm font-bold">
+                                    <LogIn className="w-4 h-4" /> Masuk Dashboard
+                                </a>
+                                <p className="text-[11px] text-dark-500">Admin & Driver — kelola armada real-time.</p>
                             </div>
                             <div className="grid grid-cols-3 gap-3 mt-8 max-w-md">
                                 {[
