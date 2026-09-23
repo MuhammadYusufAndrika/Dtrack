@@ -29,8 +29,13 @@ class TripController extends Controller
         $validated = $request->validate([
             'vehicle_id' => 'required|exists:vehicles,id',
             'driver_id' => 'required|exists:drivers,id',
+            'origin' => 'nullable|string|max:255',
+            'destination' => 'nullable|string|max:255',
             'start_latitude' => 'nullable|numeric|between:-90,90',
             'start_longitude' => 'nullable|numeric|between:-180,180',
+            'dest_latitude' => 'nullable|numeric|between:-90,90',
+            'dest_longitude' => 'nullable|numeric|between:-180,180',
+            'planned_distance_km' => 'nullable|numeric|min:0',
         ]);
 
         $trip = $this->tripService->createTrip($validated);
@@ -44,9 +49,9 @@ class TripController extends Controller
 
     public function show($id): JsonResponse
     {
-        $trip = $this->tripService->getTripById($id);
-
-        if (!$trip) {
+        try {
+            $detail = $this->tripService->getTripDetail($id);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Trip not found.',
@@ -57,7 +62,7 @@ class TripController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Trip retrieved successfully.',
-            'data' => $trip->load(['vehicle', 'driver']),
+            'data' => $detail,
         ]);
     }
 
@@ -67,8 +72,24 @@ class TripController extends Controller
 
         try {
             if ($action === 'start') {
-                $trip = $this->tripService->startTrip($id);
+                $startCoords = $request->validate([
+                    'start_latitude' => 'nullable|numeric|between:-90,90',
+                    'start_longitude' => 'nullable|numeric|between:-180,180',
+                ]);
+                $trip = $this->tripService->startTrip($id, $startCoords);
                 $message = 'Trip started successfully.';
+            } elseif ($action === 'route') {
+                $route = $request->validate([
+                    'origin' => 'nullable|string|max:255',
+                    'destination' => 'nullable|string|max:255',
+                    'start_latitude' => 'nullable|numeric|between:-90,90',
+                    'start_longitude' => 'nullable|numeric|between:-180,180',
+                    'dest_latitude' => 'nullable|numeric|between:-90,90',
+                    'dest_longitude' => 'nullable|numeric|between:-180,180',
+                    'planned_distance_km' => 'nullable|numeric|min:0',
+                ]);
+                $trip = $this->tripService->updateRoute($id, $route);
+                $message = 'Trip route updated successfully.';
             } else {
                 $validated = $request->validate([
                     'end_latitude' => 'nullable|numeric|between:-90,90',

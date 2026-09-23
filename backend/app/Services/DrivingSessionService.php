@@ -35,6 +35,7 @@ class DrivingSessionService
             $session = $this->drivingSessionRepository->create([
                 'vehicle_id' => $data['vehicle_id'],
                 'driver_id' => $data['driver_id'],
+                'trip_id' => $data['trip_id'] ?? null,
                 'start_time' => Carbon::now(),
                 'start_latitude' => $data['start_latitude'] ?? null,
                 'start_longitude' => $data['start_longitude'] ?? null,

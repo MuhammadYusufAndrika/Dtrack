@@ -2,8 +2,9 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import DriverLayout from '../../Layouts/DriverLayout';
 import StatCard from '../../Components/StatCard';
 import PageHeader from '../../Components/PageHeader';
-import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import MapTiles from '../../Components/MapTiles';
+import { haversineKm, fetchRoadRoute, straightLine, formatKm } from '../../utils/route';
 import L from 'leaflet';
 import { Truck, Route, Activity, Clock, MapPin, Navigation, Play, Square, Camera, AlertTriangle, Shield, Eye, Phone, User } from 'lucide-react';
 
@@ -27,6 +28,7 @@ const AI_SERVICE_WS = resolveAiWs();
 const AI_SEND_MS = Number(import.meta.env?.VITE_AI_SEND_MS) || 500;
 
 const vehicleIcon = L.divIcon({ className: '', html: '<div style="width:36px;height:36px;background:linear-gradient(135deg,#22c55e,#06b6d4);border:3px solid #fff;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(34,197,94,0.5);font-size:16px;">🚛</div>', iconSize: [36, 36], iconAnchor: [18, 18] });
+const destIcon = L.divIcon({ className: '', html: '<div style="width:36px;height:36px;background:linear-gradient(135deg,#f59e0b,#ef4444);border:3px solid #fff;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(239,68,68,0.5);font-size:16px;">🎯</div>', iconSize: [36, 36], iconAnchor: [18, 18] });
 
 function haversine(lat1, lon1, lat2, lon2) {
     const R = 6371;
@@ -36,11 +38,22 @@ function haversine(lat1, lon1, lat2, lon2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function MapUpdater({ position }) {
+function MapUpdater({ position, follow }) {
     const map = useMap();
+    const centered = useRef(false);
     useEffect(() => {
-        if (position) map.flyTo(position, map.getZoom(), { duration: 1 });
-    }, [position]);
+        // Tengah otomatis HANYA saat mode ikuti aktif.
+        // Kalau user menggeser peta manual, jangan tarik balik.
+        if (position && (follow || !centered.current)) {
+            map.flyTo(position, map.getZoom(), { duration: 1 });
+            centered.current = true;
+        }
+    }, [position, follow]);
+    return null;
+}
+
+function FollowCatcher({ onUserDrag }) {
+    useMapEvents({ dragstart: onUserDrag });
     return null;
 }
 
@@ -55,6 +68,9 @@ export default function DriverDashboard() {
     const [elapsed, setElapsed] = useState(0);
     const [distance, setDistance] = useState(0);
     const [gpsError, setGpsError] = useState('');
+    const [plannedTrips, setPlannedTrips] = useState([]);
+    const [routeCoords, setRouteCoords] = useState([]);
+    const [follow, setFollow] = useState(true);
 
     const [aiResults, setAiResults] = useState(AI_INITIAL);
     const [aiStatus, setAiStatus] = useState('idle');
@@ -93,7 +109,9 @@ export default function DriverDashboard() {
                 if (myDriver) {
                     const tRes = await fetch('/api/trips', { headers });
                     const tJson = await tRes.json();
-                    const ongoing = tJson.data?.find((t) => t.driver_id === myDriver.id && t.status === 'IN_PROGRESS');
+                    const mine = tJson.data?.filter((t) => t.driver_id === myDriver.id) || [];
+                    const ongoing = mine.find((t) => t.status === 'IN_PROGRESS');
+                    setPlannedTrips(mine.filter((t) => t.status === 'PLANNED'));
                     if (ongoing) {
                         setActiveTrip(ongoing);
                         setTripState('tracking');
@@ -301,6 +319,56 @@ export default function DriverDashboard() {
         }
     }, [driver, startGpsTracking, startCamera]);
 
+    // Mulai trip yang sudah direncanakan admin (ada tujuan + estimasi jarak).
+    const handleStartPlannedTrip = useCallback(async (trip) => {
+        setTripState('starting');
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' };
+
+        try {
+            const pos = await new Promise((resolve, reject) =>
+                navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
+            );
+
+            const startRes = await fetch(`/api/trips/${trip.id}`, {
+                method: 'PATCH', headers,
+                body: JSON.stringify({
+                    action: 'start',
+                    start_latitude: pos.coords.latitude,
+                    start_longitude: pos.coords.longitude,
+                }),
+            });
+            const startJson = await startRes.json();
+            if (!startJson.success) { setGpsError(startJson.message); setTripState('idle'); return; }
+            setActiveTrip(startJson.data);
+            setPlannedTrips((prev) => prev.filter((t) => t.id !== trip.id));
+
+            startGpsTracking();
+            setTripState('tracking');
+            setGpsError('');
+            startCamera();
+        } catch (err) {
+            setGpsError(err.message || 'Failed to start trip');
+            setTripState('idle');
+        }
+    }, [startGpsTracking, startCamera]);
+
+    // Garis rute awal -> tujuan (OSRM, fallback garis lurus untuk antar-pulau).
+    useEffect(() => {
+        if (!activeTrip) { setRouteCoords([]); return; }
+        const oLat = Number(activeTrip.start_latitude);
+        const oLng = Number(activeTrip.start_longitude);
+        const dLat = Number(activeTrip.dest_latitude);
+        const dLng = Number(activeTrip.dest_longitude);
+        if (!oLat || !oLng || !dLat || !dLng) { setRouteCoords([]); return; }
+        let cancelled = false;
+        fetchRoadRoute({ lat: oLat, lng: oLng }, { lat: dLat, lng: dLng }).then((r) => {
+            if (cancelled) return;
+            setRouteCoords(r && r.length > 1 ? r : straightLine({ lat: oLat, lng: oLng }, { lat: dLat, lng: dLng }));
+        });
+        return () => { cancelled = true; };
+    }, [activeTrip?.id]);
+
     const handleEndTrip = useCallback(async () => {
         if (!activeTrip || !gpsPos) return;
         setTripState('ending');
@@ -355,6 +423,9 @@ export default function DriverDashboard() {
 
     const tracking = tripState === 'tracking';
     const busy = tripState === 'starting' || tripState === 'ending';
+    const remainingKm = tracking && gpsPos && activeTrip?.dest_latitude && activeTrip?.dest_longitude
+        ? haversineKm(gpsPos.lat, gpsPos.lng, Number(activeTrip.dest_latitude), Number(activeTrip.dest_longitude))
+        : null;
 
     return (
         <DriverLayout>
@@ -381,8 +452,37 @@ export default function DriverDashboard() {
                     }
                 />
 
+                {tripState === 'idle' && plannedTrips.length > 0 && (
+                    <div className="glass rounded-3xl p-5 space-y-3 animate-fade-up">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-dark-400">Tugas rute dari admin</h3>
+                        {plannedTrips.map((t) => (
+                            <div key={t.id} className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-dark-200/60 p-3.5">
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-bold text-dark-900">🎯 {t.origin || 'Titik awal'} → {t.destination || 'Tujuan'}</p>
+                                    <p className="text-xs text-dark-500 mt-0.5">
+                                        {t.vehicle?.plate_number ? `${t.vehicle.plate_number} · ` : ''}Estimasi {formatKm(t.planned_distance_km)}
+                                    </p>
+                                </div>
+                                <button onClick={() => handleStartPlannedTrip(t)} disabled={busy}
+                                    className="btn-glow flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-white text-xs font-bold disabled:opacity-60 flex-shrink-0">
+                                    <Play className="w-3.5 h-3.5" /> Mulai Rute Ini
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {gpsError && <div className="glass rounded-2xl !border-danger-500/30 p-3.5 text-sm text-danger-500 animate-fade-up">⚠️ {gpsError}</div>}
                 {aiError && <div className="glass rounded-2xl !border-warning-500/30 p-3.5 text-sm text-warning-500 animate-fade-up">📷 {aiError}</div>}
+
+                {tracking && activeTrip?.destination && (
+                    <div className="glass rounded-2xl px-5 py-3.5 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-sm animate-fade-up">
+                        <span className="font-bold text-dark-900">🎯 {activeTrip.origin || 'Awal'} → {activeTrip.destination}</span>
+                        <span className="text-dark-500">Estimasi <strong className="text-dark-900">{formatKm(activeTrip.planned_distance_km)}</strong></span>
+                        {remainingKm != null && <span className="text-dark-500">Sisa <strong className="text-primary-600">{formatKm(remainingKm)}</strong></span>}
+                        <span className="text-dark-500">Ditempuh <strong className="text-dark-900">{distance.toFixed(2)} km</strong></span>
+                    </div>
+                )}
 
                 {tracking ? (
                     <div className="relative overflow-hidden rounded-3xl p-[1.5px] bg-gradient-to-r from-success-500 via-accent-500 to-primary-500 animate-fade-up">
@@ -394,7 +494,7 @@ export default function DriverDashboard() {
                             <div className="flex items-center gap-6 sm:ml-auto text-center">
                                 <div><p className="font-display text-xl font-bold text-dark-900 tabular-nums">{gpsPos ? Math.round(gpsPos.speed * 3.6) : 0}<span className="text-xs text-dark-400 font-sans font-medium"> km/h</span></p><p className="text-[10px] uppercase tracking-widest text-dark-500 font-bold">Speed</p></div>
                                 <div className="w-px h-10 bg-dark-200/70" />
-                                <div><p className="font-display text-xl font-bold text-dark-900 tabular-nums">{distance.toFixed(2)}<span className="text-xs text-dark-400 font-sans font-medium"> km</span></p><p className="text-[10px] uppercase tracking-widest text-dark-500 font-bold">Jarak</p></div>
+                                <div><p className="font-display text-xl font-bold text-dark-900 tabular-nums">{distance.toFixed(2)}<span className="text-xs text-dark-400 font-sans font-medium"> km</span></p><p className="text-[10px] uppercase tracking-widest text-dark-500 font-bold">Ditempuh</p></div>
                                 <div className="w-px h-10 bg-dark-200/70" />
                                 <div><p className="font-display text-xl font-bold text-dark-900 font-mono">{driver.vehicle?.plate_number}</p><p className="text-[10px] uppercase tracking-widest text-dark-500 font-bold">Unit</p></div>
                             </div>
@@ -414,7 +514,7 @@ export default function DriverDashboard() {
                     <StatCard icon={Activity} label="Status" value={tracking ? 'On Trip' : driver.status || 'Siaga'} accent={tracking ? 'green' : 'cyan'} delay="delay-1" />
                     <StatCard icon={Clock} label="Durasi" value={tracking ? fmt(elapsed) : '—'} accent="violet" delay="delay-2" />
                     <StatCard icon={Navigation} label="Speed" value={tracking && gpsPos ? `${Math.round(gpsPos.speed * 3.6)} km/h` : '—'} accent="cyan" delay="delay-2" />
-                    <StatCard icon={MapPin} label="Jarak" value={tracking ? `${distance.toFixed(2)} km` : '—'} accent="amber" delay="delay-3" />
+                    <StatCard icon={MapPin} label="Jarak" value={tracking && activeTrip?.planned_distance_km ? formatKm(activeTrip.planned_distance_km) : tracking ? `${distance.toFixed(2)} km` : '—'} accent="amber" delay="delay-3" />
                     <StatCard icon={Camera} label="AI Cam" value={cameraActive ? 'Aktif' : 'Mati'} accent={cameraActive ? 'green' : 'red'} delay="delay-3" />
                 </div>
 
@@ -424,12 +524,23 @@ export default function DriverDashboard() {
                             <h2 className="text-sm font-bold text-dark-900 flex items-center gap-2"><Route className="w-4 h-4 text-primary-500" /> {tracking ? 'Peta Live' : 'Posisi Terakhir'}</h2>
                             {tracking && <span className="flex items-center gap-1.5 text-[11px] font-bold text-success-500"><span className="w-1.5 h-1.5 rounded-full bg-success-400 animate-pulse" /> LIVE</span>}
                         </div>
-                        <div className="h-[380px]">
+                        <div className="h-[380px] relative">
                             <MapContainer center={gpsPos ? [gpsPos.lat, gpsPos.lng] : [-6.2088, 106.8456]} zoom={15} className="h-full w-full z-0" zoomControl={false}>
                                 <MapTiles />
-                                {gpsPos && <MapUpdater position={[gpsPos.lat, gpsPos.lng]} />}
+                                <FollowCatcher onUserDrag={() => setFollow(false)} />
+                                {gpsPos && <MapUpdater position={[gpsPos.lat, gpsPos.lng]} follow={follow} />}
                                 {gpsPos && <Marker position={[gpsPos.lat, gpsPos.lng]} icon={vehicleIcon}><Popup><div className="text-sm"><p className="font-bold">{Math.round(gpsPos.speed * 3.6)} km/h</p><p className="font-mono text-xs">{gpsPos.lat.toFixed(5)}, {gpsPos.lng.toFixed(5)}</p></div></Popup></Marker>}
+                                {activeTrip?.dest_latitude && activeTrip?.dest_longitude && (
+                                    <Marker position={[Number(activeTrip.dest_latitude), Number(activeTrip.dest_longitude)]} icon={destIcon}>
+                                        <Popup><div className="text-sm"><p className="font-bold">🎯 {activeTrip.destination || 'Tujuan'}</p>{remainingKm != null && <p>Sisa {formatKm(remainingKm)}</p>}</div></Popup>
+                                    </Marker>
+                                )}
+                                {routeCoords.length > 1 && <Polyline positions={routeCoords} pathOptions={{ color: '#2563eb', weight: 4, opacity: 0.85, dashArray: '10 8' }} />}
                             </MapContainer>
+                            <button onClick={() => setFollow((f) => !f)} title={follow ? 'Peta mengikuti kendaraan' : 'Peta bebas — klik untuk mengikuti lagi'}
+                                className={`absolute top-3 right-3 z-[600] px-3 py-2 rounded-xl text-[11px] font-bold shadow-lg backdrop-blur transition-all ${follow ? 'bg-primary-600 text-white' : 'glass-strong text-dark-900'}`}>
+                                {follow ? '📍 Mengikuti' : '⏸️ Bebas'}
+                            </button>
                         </div>
                         {tracking && gpsPos && (
                             <div className="px-5 py-3.5 border-t border-dark-200/60 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">

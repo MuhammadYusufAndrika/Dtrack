@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\DrivingSession;
+use App\Models\LocationHistory;
 use App\Models\Trip;
 use App\Repositories\TripRepository;
 use App\Repositories\DrivingSessionRepository;
@@ -27,9 +29,9 @@ class TripService
         });
     }
 
-    public function startTrip($id): Trip
+    public function startTrip($id, array $opts = []): Trip
     {
-        return DB::transaction(function () use ($id) {
+        return DB::transaction(function () use ($id, $opts) {
             $trip = $this->tripRepository->findOrFail($id);
 
             if ($trip->status === 'IN_PROGRESS') {
@@ -39,8 +41,9 @@ class TripService
             $trip->update([
                 'status' => 'IN_PROGRESS',
                 'start_time' => Carbon::now(),
-                'start_latitude' => $trip->start_latitude,
-                'start_longitude' => $trip->start_longitude,
+                // GPS aktual sopir saat menekan Mulai (fallback ke titik awal admin).
+                'start_latitude' => $opts['start_latitude'] ?? $trip->start_latitude,
+                'start_longitude' => $opts['start_longitude'] ?? $trip->start_longitude,
                 'end_time' => null,
                 'end_latitude' => null,
                 'end_longitude' => null,
@@ -94,6 +97,22 @@ class TripService
         return $this->tripRepository->findActiveTrips();
     }
 
+    // Ubah rute trip yang masih PLANNED (admin koreksi titik/tujuan).
+    public function updateRoute($id, array $data): Trip
+    {
+        return DB::transaction(function () use ($id, $data) {
+            $trip = $this->tripRepository->findOrFail($id);
+
+            if ($trip->status !== 'PLANNED') {
+                throw new \RuntimeException('Hanya trip PLANNED yang rutenya bisa diubah.');
+            }
+
+            $trip->update($data);
+
+            return $trip->fresh();
+        });
+    }
+
     public function getTripHistory($vehicleId = null, $driverId = null): Collection
     {
         return $this->tripRepository->getTripHistory($vehicleId, $driverId);
@@ -102,6 +121,35 @@ class TripService
     public function getTripById($id): ?Trip
     {
         return $this->tripRepository->find($id);
+    }
+
+    // Detail history perjalanan: trip + sesi GPS + jejak koordinat untuk peta.
+    // Berlaku untuk trip manual sopir maupun assign admin.
+    public function getTripDetail($id): array
+    {
+        $trip = $this->tripRepository->query()->with(['vehicle', 'driver'])->findOrFail($id);
+
+        $session = DrivingSession::where('trip_id', $trip->id)->latest()->first();
+        if (!$session && $trip->status === 'IN_PROGRESS') {
+            // Trip lama (sebelum kolom trip_id ada): fallback sesi aktif kendaraan.
+            $session = $this->drivingSessionRepository->findActiveByVehicle($trip->vehicle_id);
+        }
+
+        $path = [];
+        if ($session) {
+            $path = LocationHistory::where('driving_session_id', $session->id)
+                ->orderBy('timestamp')
+                ->limit(2000)
+                ->get(['latitude', 'longitude', 'speed', 'timestamp'])
+                ->toArray();
+        }
+
+        return [
+            'trip' => $trip,
+            'session' => $session,
+            'path' => $path,
+            'path_truncated' => count($path) >= 2000,
+        ];
     }
 
     public function getAllTrips(): Collection

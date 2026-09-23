@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import MapTiles from '../../Components/MapTiles';
+import { haversineKm, fetchRoadRoute, straightLine, formatKm } from '../../utils/route';
 import L from 'leaflet';
 import { Search, Truck, MapPin, Gauge, Clock, ArrowLeft, Loader2, Radar, ShieldCheck, Zap, Navigation, LogIn } from 'lucide-react';
 
@@ -62,6 +63,7 @@ export default function Track() {
     const [wsConnected, setWsConnected] = useState(false);
     const echoChannel = useRef(null);
     const pollRef = useRef(null);
+    const [routeCoords, setRouteCoords] = useState([]);
 
     const searchVehicle = useCallback(async (plate) => {
         const trimmed = (plate || '').trim().toUpperCase();
@@ -71,6 +73,7 @@ export default function Track() {
         setError('');
         setVehicle(null);
         setLiveLocation(null);
+        setRouteCoords([]);
         setHasSearched(true);
 
         try {
@@ -81,6 +84,18 @@ export default function Track() {
                 setVehicle(json.data);
                 if (json.data.latest_location) {
                     setLiveLocation(json.data.latest_location);
+                }
+                // Garis rute awal -> tujuan (OSRM, fallback garis lurus antar-pulau)
+                const at = json.data.active_trip;
+                if (at?.dest_latitude && at?.dest_longitude) {
+                    const oLat = Number(at.start_latitude) || json.data.latest_location?.latitude;
+                    const oLng = Number(at.start_longitude) || json.data.latest_location?.longitude;
+                    const dLat = Number(at.dest_latitude);
+                    const dLng = Number(at.dest_longitude);
+                    if (oLat && oLng && dLat && dLng) {
+                        fetchRoadRoute({ lat: oLat, lng: oLng }, { lat: dLat, lng: dLng })
+                            .then((r) => setRouteCoords(r && r.length > 1 ? r : straightLine({ lat: oLat, lng: oLng }, { lat: dLat, lng: dLng })));
+                    }
                 }
                 subscribeToVehicle(json.data.id);
             } else {
@@ -153,7 +168,12 @@ export default function Track() {
         searchVehicle(plateNumber);
     };
 
-    const reset = () => { setHasSearched(false); setVehicle(null); setLiveLocation(null); setPlateNumber(''); setError(''); };
+    const reset = () => { setHasSearched(false); setVehicle(null); setLiveLocation(null); setRouteCoords([]); setPlateNumber(''); setError(''); };
+
+    const activeTrip = vehicle?.active_trip;
+    const sisaKm = activeTrip?.dest_latitude && activeTrip?.dest_longitude && liveLocation
+        ? haversineKm(liveLocation.latitude, liveLocation.longitude, Number(activeTrip.dest_latitude), Number(activeTrip.dest_longitude))
+        : null;
 
     return (
         <div className="min-h-screen relative overflow-x-hidden">
@@ -345,12 +365,29 @@ export default function Track() {
                             </div>
                         )}
 
+                        {activeTrip?.destination && (
+                            <div className="glass rounded-2xl px-4 py-3.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs sm:text-sm">
+                                <span className="font-bold text-dark-900">🎯 {activeTrip.origin || 'Titik awal'} → {activeTrip.destination}</span>
+                                <span className="text-dark-500">Estimasi <strong className="text-dark-900">{formatKm(activeTrip.planned_distance_km)}</strong></span>
+                                {sisaKm != null && <span className="text-dark-500">Sisa <strong className="text-primary-600">{formatKm(sisaKm)}</strong></span>}
+                                <span className={`font-bold ${activeTrip.status === 'IN_PROGRESS' ? 'text-success-500' : 'text-dark-400'}`}>
+                                    {activeTrip.status === 'IN_PROGRESS' ? '● Dalam perjalanan' : '○ Terjadwal'}
+                                </span>
+                            </div>
+                        )}
+
                         {liveLocation ? (
                             <div className="relative rounded-3xl overflow-hidden border border-dark-200/70 shadow-[0_24px_64px_rgba(15,23,42,0.15)]">
                                 <div className="h-[calc(100vh-280px)] min-h-[420px]">
                                     <MapContainer center={[liveLocation.latitude, liveLocation.longitude]} zoom={15} className="h-full w-full z-0" zoomControl={true}>
                                         <MapTiles />
                                         <MapUpdater location={liveLocation} />
+                                        {activeTrip?.dest_latitude && activeTrip?.dest_longitude && (
+                                            <Marker position={[Number(activeTrip.dest_latitude), Number(activeTrip.dest_longitude)]} icon={activeVehicleIcon}>
+                                                <Popup><div className="text-sm"><p className="font-bold">🎯 {activeTrip.destination || 'Tujuan'}</p></div></Popup>
+                                            </Marker>
+                                        )}
+                                        {routeCoords.length > 1 && <Polyline positions={routeCoords} pathOptions={{ color: '#2563eb', weight: 4, opacity: 0.85, dashArray: '10 8' }} />}
                                         <Marker position={[liveLocation.latitude, liveLocation.longitude]} icon={vehicle.is_driving ? activeVehicleIcon : vehicleIcon}>
                                             <Popup>
                                                 <div className="text-sm min-w-[170px]">

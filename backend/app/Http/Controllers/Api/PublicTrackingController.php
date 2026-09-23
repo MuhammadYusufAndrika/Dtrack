@@ -29,6 +29,13 @@ class PublicTrackingController extends Controller
 
         $latestLocation = $vehicle->latestLocation;
 
+        // Trip aktif (berjalan) atau terjadwal (rencana admin) untuk kendaraan ini.
+        $activeTrip = \App\Models\Trip::where('vehicle_id', $vehicle->id)
+            ->whereIn('status', ['IN_PROGRESS', 'PLANNED'])
+            ->orderByRaw("FIELD(status, 'IN_PROGRESS', 'PLANNED')")
+            ->latest()
+            ->first();
+
         return response()->json([
             'success' => true,
             'message' => 'Kendaraan ditemukan.',
@@ -48,6 +55,19 @@ class PublicTrackingController extends Controller
                     'speed' => $latestLocation->speed,
                     'heading' => $latestLocation->heading,
                     'timestamp' => $latestLocation->timestamp,
+                ] : null,
+                'active_trip' => $activeTrip ? [
+                    'id' => $activeTrip->id,
+                    'status' => $activeTrip->status,
+                    'origin' => $activeTrip->origin,
+                    'destination' => $activeTrip->destination,
+                    'start_latitude' => $activeTrip->start_latitude,
+                    'start_longitude' => $activeTrip->start_longitude,
+                    'dest_latitude' => $activeTrip->dest_latitude,
+                    'dest_longitude' => $activeTrip->dest_longitude,
+                    'planned_distance_km' => $activeTrip->planned_distance_km,
+                    'total_distance_km' => $activeTrip->total_distance_km,
+                    'distance_km' => $activeTrip->distance_km,
                 ] : null,
             ],
         ]);
