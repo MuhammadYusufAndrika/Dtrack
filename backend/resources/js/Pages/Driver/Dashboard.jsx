@@ -175,16 +175,23 @@ export default function DriverDashboard() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } });
             streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                videoRef.current.play();
-            }
+            // Elemen <video> baru ada setelah render mode tracking —
+            // pemasangan dilakukan di effect di bawah agar tidak hitam.
             setCameraActive(true);
             startAiWebSocket(stream);
         } catch (err) {
             setAiError('Camera access denied: ' + err.message);
         }
     }, []);
+
+    // Pasang stream ke <video> begitu elemennya sudah ter-render.
+    // (Dulu dipasang langsung di startCamera saat elemen belum ada -> frame hitam.)
+    useEffect(() => {
+        if (cameraActive && streamRef.current && videoRef.current && videoRef.current.srcObject !== streamRef.current) {
+            videoRef.current.srcObject = streamRef.current;
+            videoRef.current.play().catch(() => {});
+        }
+    }, [cameraActive, tripState]);
 
     const stopCamera = useCallback(() => {
         if (streamRef.current) {
@@ -253,6 +260,8 @@ export default function DriverDashboard() {
 
     const captureAndSendFrame = useCallback((stream) => {
         if (!videoRef.current || !canvasRef.current || !aiWsRef.current || aiWsRef.current.readyState !== WebSocket.OPEN) return;
+        // Jangan kirim frame hitam: video harus sudah punya data gambar.
+        if (videoRef.current.readyState < 2 || !videoRef.current.videoWidth) return;
         // Backpressure: skip frame kalau WS masih antre >256KB (cegah delay menumpuk;
         // inference ~1 detik sedangkan kirim tiap 500ms — antrean bikin tayangan basi)
         try {

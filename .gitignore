@@ -46,8 +46,9 @@ backend/storage/app/private/*
 !backend/storage/app/private/.gitignore
 
 # --- Python (AI Service) ---
-ai-service/__pycache__/
-ai-service/*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
 ai-service/.venv/
 ai-service/venv/
 ai-service/env/
