@@ -136,18 +136,37 @@ class TripService
         }
 
         $path = [];
+        $pathSource = null;
         if ($session) {
             $path = LocationHistory::where('driving_session_id', $session->id)
                 ->orderBy('timestamp')
                 ->limit(2000)
                 ->get(['latitude', 'longitude', 'speed', 'timestamp'])
                 ->toArray();
+            if (!empty($path)) {
+                $pathSource = 'session';
+            }
+        }
+
+        // Cadangan: trip lama / sesi tak tertaut — ambil jejak dari rentang
+        // waktu kendaraan, jadi "bekas jalan" tetap tampil selama ada data GPS.
+        if (empty($path) && $trip->start_time) {
+            $path = LocationHistory::where('vehicle_id', $trip->vehicle_id)
+                ->whereBetween('timestamp', [$trip->start_time, $trip->end_time ?? Carbon::now()])
+                ->orderBy('timestamp')
+                ->limit(2000)
+                ->get(['latitude', 'longitude', 'speed', 'timestamp'])
+                ->toArray();
+            if (!empty($path)) {
+                $pathSource = 'timerange';
+            }
         }
 
         return [
             'trip' => $trip,
             'session' => $session,
             'path' => $path,
+            'path_source' => $pathSource,
             'path_truncated' => count($path) >= 2000,
         ];
     }

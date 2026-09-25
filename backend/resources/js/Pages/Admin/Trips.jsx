@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MapContainer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import MapTiles from '../../Components/MapTiles';
 import L from 'leaflet';
@@ -57,6 +57,12 @@ export default function Trips() {
     const [searching, setSearching] = useState(false);
     const [mapFocus, setMapFocus] = useState(null);
     const [detailId, setDetailId] = useState(null);
+    const detailRef = useRef(null);
+
+    const openDetail = (id) => {
+        setDetailId(id);
+        setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    };
 
     const loadTrips = () => {
         apiFetch('/api/trips')
@@ -70,7 +76,11 @@ export default function Trips() {
             apiFetch('/api/vehicles').then((r) => r.json()).catch(() => ({})),
             apiFetch('/api/drivers').then((r) => r.json()).catch(() => ({})),
         ]).then(([t, v, d]) => {
-            if (t?.success) setTrips(t.data);
+            if (t?.success) {
+                setTrips(t.data);
+                // Langsung tampilkan history trip terbaru begitu halaman dibuka
+                if (t.data?.length) setDetailId((cur) => cur ?? t.data[0].id);
+            }
             if (v?.success) setVehicles(v.data);
             if (d?.success) setDrivers(d.data);
         }).catch(() => {}).finally(() => setLoading(false));
@@ -271,7 +281,7 @@ export default function Trips() {
             return <span className="text-sm text-dark-700">{Math.floor(mins / 60)}h {mins % 60}m</span>;
         }},
         { key: 'aksi', header: 'Aksi', render: (t) => (
-            <button onClick={() => setDetailId(t.id)}
+            <button onClick={() => openDetail(t.id)}
                 className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl glass glass-hover text-dark-900">
                 <Eye className="w-3.5 h-3.5" /> History
             </button>
@@ -439,17 +449,19 @@ export default function Trips() {
                     </div>
                 )}
 
-                {detailId && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setDetailId(null)}>
-                        <div className="glass-strong rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-display text-lg font-bold text-dark-900">History Perjalanan</h3>
-                                <button onClick={() => setDetailId(null)} className="p-2 rounded-xl glass glass-hover"><X className="w-4 h-4" /></button>
-                            </div>
-                            <TripDetail tripId={detailId} fetchFn={(url, opts) => apiFetch(url, opts)} />
-                        </div>
+                <div ref={detailRef} className="glass rounded-3xl p-5 sm:p-6 scroll-mt-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                        <h3 className="font-display text-base sm:text-lg font-bold text-dark-900">
+                            History Perjalanan{detailId ? ` — Trip #${detailId}` : ''}
+                        </h3>
+                        {detailId && <span className="text-[11px] text-dark-400">Klik History di tabel untuk ganti trip</span>}
                     </div>
-                )}
+                    {detailId ? (
+                        <TripDetail key={detailId} tripId={detailId} fetchFn={(url, opts) => apiFetch(url, opts)} />
+                    ) : (
+                        <p className="text-sm text-dark-400 py-8 text-center">Belum ada trip — buat trip dulu atau tunggu sopir jalan.</p>
+                    )}
+                </div>
             </div>
         </AdminLayout>
     );

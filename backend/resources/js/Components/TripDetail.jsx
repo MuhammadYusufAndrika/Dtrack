@@ -77,7 +77,7 @@ export default function TripDetail({ tripId, fetchFn }) {
     if (error) return <div className="p-4 rounded-xl bg-danger-500/10 border border-danger-500/30 text-sm text-danger-500">⚠️ {error}</div>;
     if (!data) return null;
 
-    const { trip: t, session, path = [], path_truncated } = data;
+    const { trip: t, session, path = [], path_source, path_truncated } = data;
     const traveled = Number(t.total_distance_km) > 0 ? Number(t.total_distance_km) : Number(session?.total_distance_km || 0);
     const trail = path
         .map((p) => [Number(p.latitude), Number(p.longitude)])
@@ -147,7 +147,8 @@ export default function TripDetail({ tripId, fetchFn }) {
                 <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-primary-600 inline-block" style={{ borderTop: '2px dashed #2563eb' }} /> Rute rencana</span>
                 <span className="flex items-center gap-1.5"><span className="w-4 h-1 rounded bg-success-500 inline-block" /> Jejak aktual ({trail.length} titik{path_truncated ? ', dipotong 2000' : ''})</span>
                 {t.status === 'PLANNED' && <span>Belum jalan — belum ada jejak GPS.</span>}
-                {!session && t.status !== 'PLANNED' && <span>Trip lama — jejak GPS tidak tertaut.</span>}
+                {path_source === 'timerange' && <span>Jejak diambil dari rentang waktu (sesi tak tertaut).</span>}
+                {trail.length === 0 && t.status !== 'PLANNED' && <span className="font-semibold text-warning-500">Belum ada titik GPS untuk trip ini — pastikan trip sudah dimulai dan GPS kendaraan terkirim.</span>}
             </div>
         </div>
     );
