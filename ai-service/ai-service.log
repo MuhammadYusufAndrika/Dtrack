@@ -2740,3 +2740,142 @@
 2026-09-25 22:59:22 | INFO     | routes.inference_routes | inference_routes:213 | WebSocket client disconnected
 2026-09-25 23:02:38 | INFO     | routes.inference_routes | inference_routes:162 | WebSocket client connected
 2026-09-25 23:04:47 | INFO     | routes.inference_routes | inference_routes:213 | WebSocket client disconnected
+2026-09-27 13:24:27 | INFO     | app | app:34 | ============================================================
+2026-09-27 13:24:27 | INFO     | app | app:35 | FleetVision AI Service starting...
+2026-09-27 13:24:27 | INFO     | app | app:36 | ============================================================
+2026-09-27 13:24:27 | INFO     | app | app:37 | STREAM_SOURCE = 'none'
+2026-09-27 13:24:27 | INFO     | app | app:41 | Initializing AI detectors...
+2026-09-27 13:24:27 | INFO     | app | app:43 | Detectors loaded: ['face', 'seatbelt', 'fatigue', 'phone', 'distraction']
+2026-09-27 13:24:27 | INFO     | services.stream_service | stream_service:43 | Stream source set to API-only mode — no local camera opened
+2026-09-27 13:24:27 | WARNING  | app | app:52 | Stream source not available — will accept API/WebSocket frames only
+2026-09-27 13:24:30 | WARNING  | services.communication_service | communication_service:45 | Backend is not reachable — results will be queued locally
+2026-09-27 13:24:30 | INFO     | app | app:70 | Continuous inference loop skipped (API-only mode)
+2026-09-27 13:24:30 | INFO     | app | app:72 | FleetVision AI Service ready
+2026-09-27 14:32:01 | INFO     | app | app:80 | Shutting down FleetVision AI Service...
+2026-09-27 14:32:02 | INFO     | services.stream_service | stream_service:148 | Stream released
+2026-09-27 14:32:02 | INFO     | services.communication_service | communication_service:204 | Communication client released
+2026-09-27 14:32:02 | INFO     | app | app:98 | FleetVision AI Service stopped
+2026-09-27 14:32:13 | INFO     | app | app:34 | ============================================================
+2026-09-27 14:32:13 | INFO     | app | app:35 | FleetVision AI Service starting...
+2026-09-27 14:32:13 | INFO     | app | app:36 | ============================================================
+2026-09-27 14:32:13 | INFO     | app | app:37 | STREAM_SOURCE = 'none'
+2026-09-27 14:32:13 | INFO     | app | app:41 | Initializing AI detectors...
+2026-09-27 14:32:13 | INFO     | app | app:43 | Detectors loaded: ['face', 'seatbelt', 'fatigue', 'phone', 'distraction']
+2026-09-27 14:32:13 | INFO     | services.stream_service | stream_service:43 | Stream source set to API-only mode — no local camera opened
+2026-09-27 14:32:13 | WARNING  | app | app:52 | Stream source not available — will accept API/WebSocket frames only
+2026-09-27 14:44:26 | WARNING  | services.communication_service | communication_service:45 | Backend is not reachable — results will be queued locally
+2026-09-27 14:44:27 | INFO     | app | app:70 | Continuous inference loop skipped (API-only mode)
+2026-09-27 14:44:27 | INFO     | app | app:72 | FleetVision AI Service ready
+2026-09-27 17:22:25 | INFO     | app | app:80 | Shutting down FleetVision AI Service...
+2026-09-27 17:22:25 | INFO     | services.stream_service | stream_service:148 | Stream released
+2026-09-27 17:22:25 | INFO     | services.communication_service | communication_service:204 | Communication client released
+2026-09-27 17:22:25 | INFO     | app | app:98 | FleetVision AI Service stopped
+2026-09-27 17:22:32 | INFO     | app | app:34 | ============================================================
+2026-09-27 17:22:32 | INFO     | app | app:35 | FleetVision AI Service starting...
+2026-09-27 17:22:32 | INFO     | app | app:36 | ============================================================
+2026-09-27 17:22:32 | INFO     | app | app:37 | STREAM_SOURCE = 'none'
+2026-09-27 17:22:32 | INFO     | app | app:41 | Initializing AI detectors...
+2026-09-27 17:22:32 | INFO     | app | app:43 | Detectors loaded: ['face', 'seatbelt', 'fatigue', 'phone', 'distraction']
+2026-09-27 17:22:32 | INFO     | services.stream_service | stream_service:43 | Stream source set to API-only mode — no local camera opened
+2026-09-27 17:22:32 | WARNING  | app | app:52 | Stream source not available — will accept API/WebSocket frames only
+2026-09-27 17:22:36 | WARNING  | services.communication_service | communication_service:45 | Backend is not reachable — results will be queued locally
+2026-09-27 17:22:36 | INFO     | app | app:70 | Continuous inference loop skipped (API-only mode)
+2026-09-27 17:22:36 | INFO     | app | app:72 | FleetVision AI Service ready
+2026-09-27 17:23:30 | INFO     | app | app:80 | Shutting down FleetVision AI Service...
+2026-09-27 17:23:30 | INFO     | services.stream_service | stream_service:148 | Stream released
+2026-09-27 17:23:30 | INFO     | services.communication_service | communication_service:204 | Communication client released
+2026-09-27 17:23:30 | INFO     | app | app:98 | FleetVision AI Service stopped
+2026-09-27 17:23:36 | INFO     | app | app:34 | ============================================================
+2026-09-27 17:23:36 | INFO     | app | app:35 | FleetVision AI Service starting...
+2026-09-27 17:23:36 | INFO     | app | app:36 | ============================================================
+2026-09-27 17:23:36 | INFO     | app | app:37 | STREAM_SOURCE = 'none'
+2026-09-27 17:23:36 | INFO     | app | app:41 | Initializing AI detectors...
+2026-09-27 17:23:36 | INFO     | app | app:43 | Detectors loaded: ['face', 'seatbelt', 'fatigue', 'phone', 'smoking', 'distraction']
+2026-09-27 17:23:36 | INFO     | services.stream_service | stream_service:43 | Stream source set to API-only mode — no local camera opened
+2026-09-27 17:23:36 | WARNING  | app | app:52 | Stream source not available — will accept API/WebSocket frames only
+2026-09-27 17:23:39 | WARNING  | services.communication_service | communication_service:45 | Backend is not reachable — results will be queued locally
+2026-09-27 17:23:39 | INFO     | app | app:70 | Continuous inference loop skipped (API-only mode)
+2026-09-27 17:23:39 | INFO     | app | app:72 | FleetVision AI Service ready
+2026-09-27 17:23:56 | INFO     | app | app:80 | Shutting down FleetVision AI Service...
+2026-09-27 17:23:56 | INFO     | services.stream_service | stream_service:148 | Stream released
+2026-09-27 17:23:56 | INFO     | services.communication_service | communication_service:204 | Communication client released
+2026-09-27 17:23:56 | INFO     | app | app:98 | FleetVision AI Service stopped
+2026-09-27 17:24:00 | INFO     | app | app:34 | ============================================================
+2026-09-27 17:24:00 | INFO     | app | app:35 | FleetVision AI Service starting...
+2026-09-27 17:24:00 | INFO     | app | app:36 | ============================================================
+2026-09-27 17:24:00 | INFO     | app | app:37 | STREAM_SOURCE = 'none'
+2026-09-27 17:24:00 | INFO     | app | app:41 | Initializing AI detectors...
+2026-09-27 17:24:01 | INFO     | app | app:43 | Detectors loaded: ['face', 'seatbelt', 'fatigue', 'phone', 'smoking', 'distraction']
+2026-09-27 17:24:01 | INFO     | services.stream_service | stream_service:43 | Stream source set to API-only mode — no local camera opened
+2026-09-27 17:24:01 | WARNING  | app | app:52 | Stream source not available — will accept API/WebSocket frames only
+2026-09-27 17:24:04 | WARNING  | services.communication_service | communication_service:45 | Backend is not reachable — results will be queued locally
+2026-09-27 17:24:04 | INFO     | app | app:70 | Continuous inference loop skipped (API-only mode)
+2026-09-27 17:24:04 | INFO     | app | app:72 | FleetVision AI Service ready
+2026-09-27 17:24:27 | INFO     | app | app:80 | Shutting down FleetVision AI Service...
+2026-09-27 17:24:27 | INFO     | services.stream_service | stream_service:148 | Stream released
+2026-09-27 17:24:27 | INFO     | services.communication_service | communication_service:204 | Communication client released
+2026-09-27 17:24:27 | INFO     | app | app:98 | FleetVision AI Service stopped
+2026-09-27 17:24:32 | INFO     | app | app:34 | ============================================================
+2026-09-27 17:24:32 | INFO     | app | app:35 | FleetVision AI Service starting...
+2026-09-27 17:24:32 | INFO     | app | app:36 | ============================================================
+2026-09-27 17:24:32 | INFO     | app | app:37 | STREAM_SOURCE = 'none'
+2026-09-27 17:24:32 | INFO     | app | app:41 | Initializing AI detectors...
+2026-09-27 17:24:32 | INFO     | app | app:43 | Detectors loaded: ['face', 'seatbelt', 'fatigue', 'phone', 'smoking', 'distraction']
+2026-09-27 17:24:32 | INFO     | services.stream_service | stream_service:43 | Stream source set to API-only mode — no local camera opened
+2026-09-27 17:24:32 | WARNING  | app | app:52 | Stream source not available — will accept API/WebSocket frames only
+2026-09-27 17:24:35 | WARNING  | services.communication_service | communication_service:45 | Backend is not reachable — results will be queued locally
+2026-09-27 17:24:35 | INFO     | app | app:70 | Continuous inference loop skipped (API-only mode)
+2026-09-27 17:24:35 | INFO     | app | app:72 | FleetVision AI Service ready
+2026-09-27 17:24:54 | INFO     | app | app:80 | Shutting down FleetVision AI Service...
+2026-09-27 17:24:54 | INFO     | services.stream_service | stream_service:148 | Stream released
+2026-09-27 17:24:54 | INFO     | services.communication_service | communication_service:204 | Communication client released
+2026-09-27 17:24:54 | INFO     | app | app:98 | FleetVision AI Service stopped
+2026-09-27 17:24:58 | INFO     | app | app:34 | ============================================================
+2026-09-27 17:24:58 | INFO     | app | app:35 | FleetVision AI Service starting...
+2026-09-27 17:24:58 | INFO     | app | app:36 | ============================================================
+2026-09-27 17:24:58 | INFO     | app | app:37 | STREAM_SOURCE = 'none'
+2026-09-27 17:24:58 | INFO     | app | app:41 | Initializing AI detectors...
+2026-09-27 17:24:58 | INFO     | app | app:43 | Detectors loaded: ['face', 'seatbelt', 'fatigue', 'phone', 'smoking', 'distraction']
+2026-09-27 17:24:58 | INFO     | services.stream_service | stream_service:43 | Stream source set to API-only mode — no local camera opened
+2026-09-27 17:24:58 | WARNING  | app | app:52 | Stream source not available — will accept API/WebSocket frames only
+2026-09-27 17:25:02 | WARNING  | services.communication_service | communication_service:45 | Backend is not reachable — results will be queued locally
+2026-09-27 17:25:02 | INFO     | app | app:70 | Continuous inference loop skipped (API-only mode)
+2026-09-27 17:25:02 | INFO     | app | app:72 | FleetVision AI Service ready
+2026-09-27 17:25:22 | INFO     | app | app:80 | Shutting down FleetVision AI Service...
+2026-09-27 17:25:22 | INFO     | services.stream_service | stream_service:148 | Stream released
+2026-09-27 17:25:22 | INFO     | services.communication_service | communication_service:204 | Communication client released
+2026-09-27 17:25:22 | INFO     | app | app:98 | FleetVision AI Service stopped
+2026-09-27 17:25:27 | INFO     | app | app:34 | ============================================================
+2026-09-27 17:25:27 | INFO     | app | app:35 | FleetVision AI Service starting...
+2026-09-27 17:25:27 | INFO     | app | app:36 | ============================================================
+2026-09-27 17:25:27 | INFO     | app | app:37 | STREAM_SOURCE = 'none'
+2026-09-27 17:25:27 | INFO     | app | app:41 | Initializing AI detectors...
+2026-09-27 17:25:27 | INFO     | app | app:43 | Detectors loaded: ['face', 'seatbelt', 'fatigue', 'phone', 'smoking', 'distraction']
+2026-09-27 17:25:27 | INFO     | services.stream_service | stream_service:43 | Stream source set to API-only mode — no local camera opened
+2026-09-27 17:25:27 | WARNING  | app | app:52 | Stream source not available — will accept API/WebSocket frames only
+2026-09-27 17:25:30 | WARNING  | services.communication_service | communication_service:45 | Backend is not reachable — results will be queued locally
+2026-09-27 17:25:30 | INFO     | app | app:70 | Continuous inference loop skipped (API-only mode)
+2026-09-27 17:25:30 | INFO     | app | app:72 | FleetVision AI Service ready
+2026-09-27 17:25:48 | INFO     | app | app:80 | Shutting down FleetVision AI Service...
+2026-09-27 17:25:48 | INFO     | services.stream_service | stream_service:148 | Stream released
+2026-09-27 17:25:48 | INFO     | services.communication_service | communication_service:205 | Communication client released
+2026-09-27 17:25:48 | INFO     | app | app:98 | FleetVision AI Service stopped
+2026-09-27 17:25:53 | INFO     | app | app:34 | ============================================================
+2026-09-27 17:25:53 | INFO     | app | app:35 | FleetVision AI Service starting...
+2026-09-27 17:25:53 | INFO     | app | app:36 | ============================================================
+2026-09-27 17:25:53 | INFO     | app | app:37 | STREAM_SOURCE = 'none'
+2026-09-27 17:25:53 | INFO     | app | app:41 | Initializing AI detectors...
+2026-09-27 17:25:54 | INFO     | app | app:43 | Detectors loaded: ['face', 'seatbelt', 'fatigue', 'phone', 'smoking', 'distraction']
+2026-09-27 17:25:54 | INFO     | services.stream_service | stream_service:43 | Stream source set to API-only mode — no local camera opened
+2026-09-27 17:25:54 | WARNING  | app | app:52 | Stream source not available — will accept API/WebSocket frames only
+2026-09-27 17:25:57 | WARNING  | services.communication_service | communication_service:45 | Backend is not reachable — results will be queued locally
+2026-09-27 17:25:57 | INFO     | app | app:70 | Continuous inference loop skipped (API-only mode)
+2026-09-27 17:25:57 | INFO     | app | app:72 | FleetVision AI Service ready
+2026-09-27 18:14:00 | INFO     | routes.inference_routes | inference_routes:162 | WebSocket client connected
+2026-09-27 18:17:00 | INFO     | routes.inference_routes | inference_routes:213 | WebSocket client disconnected
+2026-09-27 18:18:02 | INFO     | routes.inference_routes | inference_routes:162 | WebSocket client connected
+2026-09-27 18:18:35 | INFO     | routes.inference_routes | inference_routes:213 | WebSocket client disconnected
+2026-09-27 18:18:38 | INFO     | routes.inference_routes | inference_routes:162 | WebSocket client connected
+2026-09-27 18:19:34 | INFO     | routes.inference_routes | inference_routes:213 | WebSocket client disconnected
+2026-09-27 18:19:43 | INFO     | routes.inference_routes | inference_routes:162 | WebSocket client connected
+2026-09-27 18:20:14 | INFO     | routes.inference_routes | inference_routes:213 | WebSocket client disconnected

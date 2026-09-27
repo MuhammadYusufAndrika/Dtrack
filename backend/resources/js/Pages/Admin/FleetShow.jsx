@@ -6,7 +6,7 @@ import { PageLoader } from '../../Components/LoadingSpinner';
 import { MapContainer, Marker, Popup } from 'react-leaflet';
 import MapTiles from '../../Components/MapTiles';
 import L from 'leaflet';
-import { Camera, AlertTriangle, Shield, Eye, Phone, User, Navigation, RefreshCw } from 'lucide-react';
+import { Camera, AlertTriangle, Shield, Eye, Phone, User, Navigation, RefreshCw, Cigarette } from 'lucide-react';
 
 function resolveAiBase() {
     const envUrl = import.meta.env?.VITE_AI_SERVICE_URL;
@@ -26,6 +26,7 @@ function normalizeAiResult(r) {
         seatbelt:      r.seatbelt      ?? true,
         fatigue:       r.fatigue       ?? false,
         phone:         r.phone         ?? r.phone_usage ?? false,
+        smoking:       r.smoking       ?? false,
         looking_away:  r.looking_away  ?? false,
         eye_closed:    r.eye_closed    ?? 0,
         head_pose:     r.head_pose     ?? { yaw: 0, pitch: 0, roll: 0 },
@@ -182,6 +183,7 @@ export default function FleetShow({ id }) {
                                         <AiIndicator icon={Eye} label="Eyes Open" active={aiResult.eye_closed < 0.5} danger={aiResult.eye_closed >= 0.7} />
                                         <AiIndicator icon={AlertTriangle} label="No Fatigue" active={!aiResult.fatigue} danger={aiResult.fatigue} />
                                         <AiIndicator icon={Phone} label="No Phone" active={!aiResult.phone} danger={aiResult.phone} />
+                                        <AiIndicator icon={Cigarette} label="No Smoking" active={!aiResult.smoking} danger={aiResult.smoking} />
                                         <AiIndicator icon={Navigation} label="Looking Ahead" active={!aiResult.looking_away} danger={aiResult.looking_away} />
                                     </div>
                                     <div className="mt-3 pt-3 border-t border-dark-200/60">

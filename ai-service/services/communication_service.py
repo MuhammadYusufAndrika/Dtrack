@@ -122,6 +122,7 @@ class CommunicationService:
             "seatbelt": raw.get("seatbelt"),
             "fatigue": raw.get("fatigue"),
             "phone_usage": raw.get("phone"),   # frontend field 'phone' → DB column 'phone_usage'
+            "smoking": raw.get("smoking", False),
             "eye_closed": raw.get("eye_closed"),
             "yawning": raw.get("yawning"),
             "looking_away": raw.get("looking_away"),

@@ -4,7 +4,7 @@ import AdminLayout from '../../Layouts/AdminLayout';
 import PageHeader from '../../Components/PageHeader';
 import { PageLoader } from '../../Components/LoadingSpinner';
 import StatusBadge from '../../Components/StatusBadge';
-import { User, Truck, Phone, Mail, FileText, Camera, AlertTriangle, Shield, Eye, Navigation, RefreshCw, Link2, Link2Off } from 'lucide-react';
+import { User, Truck, Phone, Mail, FileText, Camera, AlertTriangle, Shield, Eye, Navigation, RefreshCw, Link2, Link2Off, Cigarette } from 'lucide-react';
 
 // Hosting-ready: pakai VITE_AI_SERVICE_URL jika diset, kalau HTTPS pakai /ai (reverse proxy)
 // biar tidak kena mixed-content + firewall port 5000. Fallback ke http://host:5000 untuk local.
@@ -18,7 +18,7 @@ function resolveAiBase() {
 const AI_SERVICE_URL = resolveAiBase();
 const LIVE_POLL_MS = Number(import.meta.env?.VITE_LIVE_POLL_MS) || 600;
 
-const AI_INITIAL = { face_detected: false, seatbelt: false, fatigue: false, phone: false, looking_away: false, eye_closed: 0, head_pose: { yaw: 0, pitch: 0, roll: 0 } };
+const AI_INITIAL = { face_detected: false, seatbelt: false, fatigue: false, phone: false, smoking: false, looking_away: false, eye_closed: 0, head_pose: { yaw: 0, pitch: 0, roll: 0 } };
 
 /**
  * Map a broadcast/backend status payload to the frontend aiResult shape.
@@ -31,6 +31,7 @@ function mapStatusToAiResult(status) {
         seatbelt:      status.seatbelt      ?? true,
         fatigue:       status.fatigue       ?? false,
         phone:         status.phone_usage   ?? status.phone ?? false,
+        smoking:       status.smoking       ?? false,
         looking_away:  status.looking_away  ?? false,
         eye_closed:    status.eye_closed    ?? 0,
         head_pose:     status.head_pose     ?? { yaw: 0, pitch: 0, roll: 0 },
@@ -307,6 +308,7 @@ export default function DriversShow({ id }) {
                                         <AiIndicator icon={Eye} label="Eyes Open" active={aiResult.eye_closed < 0.5} danger={aiResult.eye_closed >= 0.7} />
                                         <AiIndicator icon={AlertTriangle} label="No Fatigue" active={!aiResult.fatigue} danger={aiResult.fatigue} />
                                         <AiIndicator icon={Phone} label="No Phone" active={!aiResult.phone} danger={aiResult.phone} />
+                                        <AiIndicator icon={Cigarette} label="No Smoking" active={!aiResult.smoking} danger={aiResult.smoking} />
                                         <AiIndicator icon={Navigation} label="Looking Ahead" active={!aiResult.looking_away} danger={aiResult.looking_away} />
                                     </div>
                                     <div className="mt-3 pt-3 border-t border-dark-200/60">

@@ -49,6 +49,9 @@ backend/storage/app/private/*
 __pycache__/
 *.py[cod]
 *$py.class
+# Weights besar diunduh via ai-service/models/download_weights.py (atau otomatis saat init)
+ai-service/models/weights/seatbelt_yolov8n.pt
+ai-service/models/weights/smoking_yolo.pt
 ai-service/.venv/
 ai-service/venv/
 ai-service/env/

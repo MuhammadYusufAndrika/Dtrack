@@ -12,6 +12,14 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     CONFIDENCE_THRESHOLD: float = 0.5
     LOG_LEVEL: str = "INFO"
+    # Model YOLO khusus sabuk (kelas person_with/without_seatbelt).
+    # Bila file tidak ada, diunduh otomatis saat init; gagal unduh -> fallback klasik.
+    SEATBELT_MODEL_PATH: str = "models/weights/seatbelt_yolov8n.pt"
+    SEATBELT_MODEL_URL: str = "https://github.com/JonathanMar/seatbelt-training/releases/download/v1.0.0/best.pt"
+    # Model YOLO rokok (kelas smoke). Asap tipis -> threshold default lebih rendah.
+    SMOKING_MODEL_PATH: str = "models/weights/smoking_yolo.pt"
+    SMOKING_MODEL_URL: str = "https://huggingface.co/basant18/Smoking-detection-YOLO26s/resolve/main/weights/best.pt"
+    SMOKING_CONFIDENCE: float = 0.4
 
     class Config:
         env_file = ".env"

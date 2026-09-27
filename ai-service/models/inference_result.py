@@ -9,6 +9,7 @@ class InferenceResult(BaseModel):
     seatbelt: bool
     fatigue: bool
     phone: bool
+    smoking: bool = False
     eye_closed: float
     yawning: bool
     looking_away: bool

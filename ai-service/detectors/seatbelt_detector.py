@@ -1,7 +1,10 @@
+import os
+import urllib.request
 import numpy as np
 import cv2
 from collections import deque
 from .base_detector import BaseDetector
+from config.settings import settings
 
 _HAS_MEDIAPIPE = False
 try:
@@ -11,21 +14,48 @@ except ImportError:
     pass
 
 
+def _download_if_missing(url: str, path: str) -> bool:
+    """Unduh weights bila belum ada. Return True jika file siap dipakai."""
+    if os.path.isfile(path):
+        return True
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        print(f"SeatbeltDetector: downloading weights from {url} ...")
+        urllib.request.urlretrieve(url, path + ".tmp")
+        os.replace(path + ".tmp", path)
+        print(f"SeatbeltDetector: saved {path}")
+        return True
+    except Exception as e:
+        print(f"SeatbeltDetector: download failed ({e})")
+        try:
+            if os.path.isfile(path + ".tmp"):
+                os.remove(path + ".tmp")
+        except Exception:
+            pass
+        return False
+
+
 class SeatbeltDetector(BaseDetector):
     """
-    Seatbelt detection — pipeline klasik yang dimaksimalkan (tanpa weights baru):
+    Seatbelt detection — YOLO khusus sebagai primer, klasik sebagai fallback:
 
-    1. MediaPipe Pose -> landmark bahu/pinggul dengan visibility gate.
-    2. CLAHE + Canny adaptif (tahan kabin gelap / backlight).
-    3. Skor diagonal: edge density + garis Hough pendukung di sekitar diagonal.
-    4. Fallback YOLOv8n person-ROI saat pose gagal (lazy-load, hanya bila perlu).
-    5. Majority vote temporal -> anti kedip per-frame.
-    6. Status "unknown" menahan nilai stabil terakhir, bukan memaksa False
-       (False palsu = alert HIGH palsu ke admin).
+    PRIMER: YOLOv8n terlatih khusus (kelas person_with_seatbelt /
+    person_without_seatbelt, mAP50 82.3%). Jauh lebih akurat daripada
+    analisis edge untuk variasi baju, cahaya, dan sudut kamera.
+
+    FALLBACK: pipeline klasik (MediaPipe Pose visibility-gated + CLAHE +
+    Canny adaptif + Hough) bila model tidak ada / tidak menemukan orang.
+
+    Di atas keduanya: majority vote temporal anti-kedip + status "unknown"
+    menahan nilai stabil terakhir (bukan memaksa False = alert palsu).
 
     Output tetap kompatibel: {"seatbelt": bool, "method": str,
     "confidence": float, "landmarks_visible": bool}
     """
+
+    # Kelas model YOLO khusus sabuk
+    CLS_WITHOUT = 0  # person_without_seatbelt
+    CLS_WITH = 1     # person_with_seatbelt
 
     LANDMARK_LEFT_SHOULDER = 11
     LANDMARK_RIGHT_SHOULDER = 12
@@ -43,10 +73,12 @@ class SeatbeltDetector(BaseDetector):
                  yolo_fallback: bool = True):
         self.pose_confidence = pose_confidence
         self.smooth_window = max(3, smooth_window)
-        self.yolo_fallback = yolo_fallback
+        self.yolo_fallback = yolo_fallback  # fallback klasik bila YOLO bisu
+        self.confidence_threshold = settings.CONFIDENCE_THRESHOLD
         self._pose = None
         self._use_opencv = False
-        self._yolo = None
+        self._yolo = None        # YOLO COCO kecil untuk ROI fallback klasik
+        self._belt_model = None  # YOLO khusus sabuk (primer)
         self._history = deque(maxlen=self.smooth_window)
         self._last_stable = False
 
@@ -60,13 +92,25 @@ class SeatbeltDetector(BaseDetector):
                     min_detection_confidence=self.pose_confidence,
                     min_tracking_confidence=self.pose_confidence,
                 )
-                print("SeatbeltDetector: using MediaPipe + temporal voting")
-                return
             except Exception as e:
-                print(f"SeatbeltDetector: MediaPipe failed ({e}), falling back to OpenCV")
+                print(f"SeatbeltDetector: MediaPipe failed ({e})")
+                self._pose = None
 
-        self._use_opencv = True
-        print("SeatbeltDetector: using OpenCV analysis + temporal voting")
+        if self._pose is None:
+            self._use_opencv = True
+
+        # Model YOLO khusus sabuk (primer)
+        try:
+            if _download_if_missing(settings.SEATBELT_MODEL_URL,
+                                    settings.SEATBELT_MODEL_PATH):
+                from ultralytics import YOLO
+                self._belt_model = YOLO(settings.SEATBELT_MODEL_PATH)
+                print("SeatbeltDetector: primary = YOLO seatbelt model")
+            else:
+                print("SeatbeltDetector: primary = classical pipeline (no weights)")
+        except Exception as e:
+            print(f"SeatbeltDetector: YOLO seatbelt model failed ({e}), classical primary")
+            self._belt_model = None
 
     # ------------------------------------------------------------------ util
     @staticmethod
@@ -144,16 +188,37 @@ class SeatbeltDetector(BaseDetector):
         return False
 
     # -------------------------------------------------------------- pipelines
-    def _raw_detect(self, frame: np.ndarray) -> dict:
-        """Deteksi mentah per-frame. seatbelt bisa True/False/None (unknown)."""
-        h, w = frame.shape[:2]
-        if h < 160 or w < 160:
-            return {"seatbelt": None, "method": "frame_too_small",
-                    "confidence": 0.0, "landmarks_visible": False}
+    def _raw_yolo_belt(self, frame: np.ndarray):
+        """Primer YOLO khusus. Return True/False/None(butuh fallback)."""
+        if self._belt_model is None:
+            return None, 0.0
+        try:
+            results = self._belt_model(frame, verbose=False)
+            best_with, best_without = 0.0, 0.0
+            for r in results:
+                if r.boxes is None:
+                    continue
+                for i in range(len(r.boxes)):
+                    cls_id = int(r.boxes.cls[i].item())
+                    conf = float(r.boxes.conf[i].item())
+                    if conf < self.confidence_threshold:
+                        continue
+                    if cls_id == self.CLS_WITH:
+                        best_with = max(best_with, conf)
+                    elif cls_id == self.CLS_WITHOUT:
+                        best_without = max(best_without, conf)
+            if best_with <= 0 and best_without <= 0:
+                return None, 0.0  # tak ada orang terdeteksi -> fallback
+            if best_with >= best_without:
+                return True, best_with
+            return False, best_without
+        except Exception as e:
+            print(f"SeatbeltDetector YOLO error: {e}")
+            return None, 0.0
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        edges = self._adaptive_edges(gray)
-
+    def _raw_classical(self, frame: np.ndarray, gray: np.ndarray,
+                       edges: np.ndarray) -> dict:
+        """Fallback klasik. seatbelt bisa True/False/None (unknown)."""
         if self._pose is not None and not self._use_opencv:
             try:
                 results = self._pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -161,6 +226,7 @@ class SeatbeltDetector(BaseDetector):
                 print(f"SeatbeltDetector mediapipe error: {e}")
                 results = None
             if results is not None and results.pose_landmarks:
+                h, w = frame.shape[:2]
                 lm = results.pose_landmarks.landmark
                 pts = {
                     "ls": (lm[self.LANDMARK_LEFT_SHOULDER].x * w,
@@ -176,8 +242,6 @@ class SeatbeltDetector(BaseDetector):
                            lm[self.LANDMARK_RIGHT_HIP].y * h,
                            lm[self.LANDMARK_RIGHT_HIP].visibility),
                 }
-                # Belt: bahu -> pinggul BERLAWANAN. Hanya nilai diagonal
-                # yang kedua ujungnya benar terlihat.
                 votes = []
                 for a, b in (("ls", "rh"), ("rs", "lh")):
                     if pts[a][2] >= self.VIS_THRESHOLD and pts[b][2] >= self.VIS_THRESHOLD:
@@ -189,9 +253,8 @@ class SeatbeltDetector(BaseDetector):
                     return {"seatbelt": belt, "method": "pose_estimation",
                             "confidence": 0.85 if belt else 0.7,
                             "landmarks_visible": True}
-                # Landmark tak terlihat -> jangan vonis False, coba fallback.
             elif results is not None:
-                pass  # pose tidak menemukan orang -> fallback di bawah
+                pass  # pose tidak menemukan orang -> coba YOLO ROI di bawah
 
         if self.yolo_fallback:
             return self._detect_yolo_person(frame, gray)
@@ -201,6 +264,25 @@ class SeatbeltDetector(BaseDetector):
 
         return {"seatbelt": None, "method": "no_evidence",
                 "confidence": 0.0, "landmarks_visible": False}
+
+    def _raw_detect(self, frame: np.ndarray) -> dict:
+        """Deteksi mentah per-frame. seatbelt bisa True/False/None (unknown)."""
+        h, w = frame.shape[:2]
+        if h < 160 or w < 160:
+            return {"seatbelt": None, "method": "frame_too_small",
+                    "confidence": 0.0, "landmarks_visible": False}
+
+        # 1) Primer: YOLO khusus sabuk
+        belt, conf = self._raw_yolo_belt(frame)
+        if belt is not None:
+            return {"seatbelt": belt, "method": "yolo_seatbelt",
+                    "confidence": round(float(conf), 2),
+                    "landmarks_visible": False}
+
+        # 2) Fallback klasik
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        edges = self._adaptive_edges(gray)
+        return self._raw_classical(frame, gray, edges)
 
     def _ensure_yolo(self):
         if self._yolo is None:
@@ -249,7 +331,6 @@ class SeatbeltDetector(BaseDetector):
                     "confidence": 0.0, "landmarks_visible": False}
 
         edges = self._adaptive_edges(crop)
-        ch, cw = edges.shape[:2]
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=25,
                                 minLineLength=int(0.35 * torso_h), maxLineGap=10)
         belt_like = 0
@@ -312,4 +393,5 @@ class SeatbeltDetector(BaseDetector):
     def release(self) -> None:
         self._pose = None
         self._yolo = None
+        self._belt_model = None
         self._history.clear()

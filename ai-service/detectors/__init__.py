@@ -3,6 +3,7 @@ from .face_detector import FaceDetector
 from .seatbelt_detector import SeatbeltDetector
 from .fatigue_detector import FatigueDetector
 from .phone_detector import PhoneDetector
+from .smoking_detector import SmokingDetector
 from .distraction_detector import DistractionDetector
 from typing import Dict
 
@@ -14,6 +15,7 @@ def create_detectors() -> Dict[str, BaseDetector]:
         "seatbelt": SeatbeltDetector(),
         "fatigue": FatigueDetector(),
         "phone": PhoneDetector(),
+        "smoking": SmokingDetector(),
         "distraction": DistractionDetector(),
     }
     for name, detector in detectors.items():
@@ -30,6 +32,7 @@ __all__ = [
     "SeatbeltDetector",
     "FatigueDetector",
     "PhoneDetector",
+    "SmokingDetector",
     "DistractionDetector",
     "create_detectors",
 ]

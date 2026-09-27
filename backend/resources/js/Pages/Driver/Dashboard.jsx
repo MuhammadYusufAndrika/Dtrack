@@ -6,7 +6,7 @@ import { MapContainer, Marker, Popup, Polyline, useMap, useMapEvents } from 'rea
 import MapTiles from '../../Components/MapTiles';
 import { haversineKm, fetchRoadRoute, straightLine, formatKm } from '../../utils/route';
 import L from 'leaflet';
-import { Truck, Route, Activity, Clock, MapPin, Navigation, Play, Square, Camera, AlertTriangle, Shield, Eye, Phone, User } from 'lucide-react';
+import { Truck, Route, Activity, Clock, MapPin, Navigation, Play, Square, Camera, AlertTriangle, Shield, Eye, Phone, User, Cigarette } from 'lucide-react';
 
 function resolveAiHttp() {
     const envUrl = import.meta.env?.VITE_AI_SERVICE_URL;
@@ -57,7 +57,7 @@ function FollowCatcher({ onUserDrag }) {
     return null;
 }
 
-const AI_INITIAL = { face_detected: false, seatbelt: false, fatigue: false, phone: false, looking_away: false, eye_closed: 0, head_pose: { yaw: 0, pitch: 0, roll: 0 } };
+const AI_INITIAL = { face_detected: false, seatbelt: false, fatigue: false, phone: false, smoking: false, looking_away: false, eye_closed: 0, head_pose: { yaw: 0, pitch: 0, roll: 0 } };
 
 export default function DriverDashboard() {
     const [driver, setDriver] = useState(null);
@@ -580,8 +580,8 @@ export default function DriverDashboard() {
                                     <div className="grid grid-cols-2 gap-2">
                                         <AiMini label="Seatbelt" ok={aiResults.seatbelt} warn={aiResults.face_detected && !aiResults.seatbelt} />
                                         <AiMini label="Fokus" ok={!aiResults.looking_away} warn={aiResults.looking_away} />
-                                        <AiMini label="Segar" ok={!aiResults.fatigue} warn={aiResults.fatigue} />
                                         <AiMini label="No HP" ok={!aiResults.phone} warn={aiResults.phone} />
+                                        <AiMini label="No Rokok" ok={!aiResults.smoking} warn={aiResults.smoking} />
                                     </div>
                                 </div>
                             </div>
@@ -623,8 +623,8 @@ export default function DriverDashboard() {
                                     <AiIndicator icon={User} label="Wajah" active={aiResults.face_detected} />
                                     <AiIndicator icon={Shield} label="Seatbelt" active={aiResults.seatbelt} danger={aiResults.seatbelt === false && aiResults.face_detected} />
                                     <AiIndicator icon={Eye} label="Mata Terbuka" active={aiResults.eye_closed < 0.5} danger={aiResults.eye_closed >= 0.7} />
-                                    <AiIndicator icon={AlertTriangle} label="Tidak Lelah" active={!aiResults.fatigue} danger={aiResults.fatigue} />
                                     <AiIndicator icon={Phone} label="Tanpa HP" active={!aiResults.phone} danger={aiResults.phone} />
+                                    <AiIndicator icon={Cigarette} label="Tanpa Rokok" active={!aiResults.smoking} danger={aiResults.smoking} />
                                     <AiIndicator icon={Navigation} label="Fokus Depan" active={!aiResults.looking_away} danger={aiResults.looking_away} />
                                 </div>
                                 <div className="mt-4 pt-4 border-t border-dark-200/60 grid grid-cols-3 gap-2 text-xs">

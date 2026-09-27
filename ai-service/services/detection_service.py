@@ -48,6 +48,7 @@ class DetectionService:
         3. Run distraction detector (head pose from face mesh)
         4. Run seatbelt detector (pose-based)
         5. Run phone detector (YOLO-based)
+        6. Run smoking detector (YOLO smoke-based)
 
         Args:
             frame: BGR image as numpy array
@@ -74,6 +75,9 @@ class DetectionService:
             # Run phone detector (YOLO, works without face)
             phone_result = self._run_detector("phone", frame)
 
+            # Run smoking detector (YOLO smoke, works without face)
+            smoking_result = self._run_detector("smoking", frame)
+
             # Aggregate eye_closed with running average smoothing
             current_eye_closed = fatigue_result.get("eye_closed", 0.0)
             self._eye_closed_history.append(current_eye_closed)
@@ -89,6 +93,7 @@ class DetectionService:
                 seatbelt=seatbelt_result.get("seatbelt", False),
                 fatigue=fatigue_result.get("fatigue", False),
                 phone=phone_result.get("phone", False),
+                smoking=smoking_result.get("smoking", False),
                 eye_closed=round(smoothed_eye_closed, 2),
                 yawning=fatigue_result.get("yawning", False),
                 looking_away=(
@@ -122,6 +127,7 @@ class DetectionService:
             seatbelt=False,
             fatigue=False,
             phone=False,
+            smoking=False,
             eye_closed=0.0,
             yawning=False,
             looking_away=False,
