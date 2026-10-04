@@ -43,5 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/chat/threads', [ChatController::class, 'threads']);
     Route::post('/chat', [ChatController::class, 'store']);
     Route::patch('/chat/read', [ChatController::class, 'markRead']);
+    Route::delete('/chat/thread', [ChatController::class, 'clearThread']);
+    Route::delete('/chat/{id}', [ChatController::class, 'destroy']);
 });
 

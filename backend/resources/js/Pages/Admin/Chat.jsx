@@ -3,7 +3,7 @@ import { apiFetch } from '../../utils/api';
 import AdminLayout from '../../Layouts/AdminLayout';
 import PageHeader from '../../Components/PageHeader';
 import { PageLoader } from '../../Components/LoadingSpinner';
-import { Send, Loader2, MessageCircle, User } from 'lucide-react';
+import { Send, Loader2, MessageCircle, User, Trash2 } from 'lucide-react';
 
 const fmtTime = (ts) => ts ? new Date(ts).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 const preview = (s) => (s || '').length > 42 ? `${s.slice(0, 42)}…` : (s || 'Belum ada pesan');
@@ -81,6 +81,14 @@ export default function AdminChat() {
                         loadThreadsSoft();
                     }
                 })
+                .listen('.chat.deleted', (data) => {
+                    if (data.cleared_thread) {
+                        setMessages([]);
+                        loadThreadsSoft();
+                    } else if (data.message_id) {
+                        setMessages((prev) => prev.filter((m) => m.id !== data.message_id));
+                    }
+                })
                 .subscribed(() => setConnected(true))
                 .error(() => setConnected(false));
         }
@@ -129,6 +137,34 @@ export default function AdminChat() {
         setSending(false);
     };
 
+    const handleDelete = async (id) => {
+        if (!window.confirm('Hapus pesan ini?')) return;
+        try {
+            const res = await apiFetch(`/api/chat/${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (json.success) {
+                setMessages((prev) => prev.filter((m) => m.id !== id));
+                loadThreadsSoft();
+            } else setSendError(json.message || 'Gagal menghapus pesan.');
+        } catch {
+            setSendError('Tidak dapat terhubung ke server.');
+        }
+    };
+
+    const handleClear = async () => {
+        if (!selectedId || !window.confirm(`Hapus seluruh riwayat chat ${selected?.driver?.name || ''}? Tindakan tidak bisa dibatalkan.`)) return;
+        try {
+            const res = await apiFetch('/api/chat/thread', { method: 'DELETE', body: JSON.stringify({ driver_id: selectedId }) });
+            const json = await res.json();
+            if (json.success) {
+                setMessages([]);
+                loadThreadsSoft();
+            } else setSendError(json.message || 'Gagal menghapus riwayat.');
+        } catch {
+            setSendError('Tidak dapat terhubung ke server.');
+        }
+    };
+
     if (loading) return <AdminLayout><PageLoader /></AdminLayout>;
 
     const selected = threads.find((t) => Number(t.driver?.id) === Number(selectedId));
@@ -173,16 +209,23 @@ export default function AdminChat() {
                             <>
                                 <div className="px-5 py-3.5 border-b border-dark-200/60 flex items-center gap-3">
                                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center flex-shrink-0"><User className="w-4 h-4 text-white" /></div>
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 flex-1">
                                         <p className="text-sm font-bold text-dark-900 truncate">{selected?.driver?.name}</p>
                                         <p className="text-[11px] text-dark-400 truncate">{selected?.driver?.email} {selected?.driver?.phone ? `· ${selected.driver.phone}` : ''}</p>
                                     </div>
+                                    <button onClick={handleClear} title="Hapus seluruh riwayat" className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-xl glass glass-hover text-dark-500 hover:text-danger-500 flex-shrink-0">
+                                        <Trash2 className="w-3.5 h-3.5" /><span className="hidden sm:inline">Hapus riwayat</span>
+                                    </button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
                                     {messages.map((m) => {
                                         const mine = m.sender_role === 'admin';
                                         return (
-                                            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                                            <div key={m.id} className={`flex items-center gap-1 group ${mine ? 'justify-end' : 'justify-start'}`}>
+                                                <button onClick={() => handleDelete(m.id)} title="Hapus pesan"
+                                                    className={`p-1.5 rounded-lg text-dark-300 hover:text-danger-500 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity flex-shrink-0 ${mine ? '' : 'order-2'}`}>
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
                                                 <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 ${mine ? 'bg-gradient-to-r from-primary-600 to-accent-500 text-white rounded-br-md' : 'glass-strong text-dark-900 rounded-bl-md'}`}>
                                                     {!mine && <p className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-0.5">{selected?.driver?.name?.split(' ')[0] || 'Sopir'}</p>}
                                                     <p className="text-sm whitespace-pre-wrap break-words">{m.body}</p>

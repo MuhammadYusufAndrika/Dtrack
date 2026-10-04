@@ -104,4 +104,47 @@ class ChatController extends Controller
             ], 400);
         }
     }
+
+    public function destroy(Request $request, $id): JsonResponse
+    {
+        try {
+            $this->chatService->deleteMessage($request->user(), (int) $id);
+            return response()->json([
+                'success' => true,
+                'message' => 'Message deleted.',
+                'data' => ['id' => (int) $id],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 400);
+        }
+    }
+
+    public function clearThread(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'driver_id' => 'nullable|integer|exists:drivers,id',
+        ]);
+
+        try {
+            $count = $this->chatService->clearThread(
+                $request->user(),
+                $validated['driver_id'] ?? null
+            );
+            return response()->json([
+                'success' => true,
+                'message' => 'Chat history cleared.',
+                'data' => ['deleted' => $count],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null,
+            ], 400);
+        }
+    }
 }

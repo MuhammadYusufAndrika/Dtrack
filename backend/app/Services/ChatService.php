@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\ChatMessageSent;
+use App\Events\ChatMessageDeleted;
 use App\Models\ChatMessage;
 use App\Models\Driver;
 use App\Models\User;
@@ -119,6 +120,60 @@ class ChatService
             ->where('sender_role', 'admin')
             ->where('is_read', false)
             ->count();
+    }
+
+    /** Hapus satu pesan. Sopir: hanya pesan sendiri; admin: pesan mana pun. */
+    public function deleteMessage(User $user, int $id): ChatMessage
+    {
+        return DB::transaction(function () use ($user, $id) {
+            $message = $this->chatRepository->findOrFail($id);
+
+            if (!$this->isAdmin($user)) {
+                $driver = $this->resolveDriverForUser($user);
+                if (!$driver
+                    || (int) $message->driver_id !== (int) $driver->id
+                    || $message->sender_role !== 'driver'
+                    || (int) $message->sender_id !== (int) $user->id) {
+                    throw new \RuntimeException('Tidak boleh menghapus pesan ini.');
+                }
+            }
+
+            $driverId = (int) $message->driver_id;
+            $message->delete();
+
+            try {
+                broadcast(new ChatMessageDeleted(
+                    driver_id: $driverId,
+                    message_id: $id,
+                ))->toOthers();
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('Chat delete broadcast gagal: '.$e->getMessage());
+            }
+
+            return $message;
+        });
+    }
+
+    /** Hapus seluruh riwayat satu thread. Sopir: thread sendiri; admin: wajib driver_id. */
+    public function clearThread(User $user, ?int $driverId = null): int
+    {
+        return DB::transaction(function () use ($user, $driverId) {
+            $targetId = $this->targetDriverId($user, $driverId);
+            $count = $this->chatRepository->query()
+                ->where('driver_id', $targetId)
+                ->delete();
+
+            try {
+                broadcast(new ChatMessageDeleted(
+                    driver_id: $targetId,
+                    cleared_thread: true,
+                ))->toOthers();
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('Chat clear broadcast gagal: '.$e->getMessage());
+            }
+
+            return $count;
+        });
     }
 
     private function targetDriverId(User $user, ?int $driverId): int

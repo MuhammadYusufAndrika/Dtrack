@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import DriverLayout from '../../Layouts/DriverLayout';
 import PageHeader from '../../Components/PageHeader';
-import { Send, Loader2, MessageCircle } from 'lucide-react';
+import { Send, Loader2, MessageCircle, Trash2 } from 'lucide-react';
 
 const fmtTime = (ts) => ts ? new Date(ts).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 
@@ -66,6 +66,10 @@ export default function DriverChat() {
                                 fetch('/api/chat/read', { method: 'PATCH', headers: authHeaders() }).catch(() => {});
                             }
                         })
+                        .listen('.chat.deleted', (data) => {
+                            if (data.cleared_thread) setMessages([]);
+                            else if (data.message_id) setMessages((prev) => prev.filter((m) => m.id !== data.message_id));
+                        })
                         .subscribed(() => setConnected(true))
                         .error(() => setConnected(false));
                 }
@@ -114,6 +118,30 @@ export default function DriverChat() {
         setSending(false);
     };
 
+    const handleDelete = async (id) => {
+        if (!window.confirm('Hapus pesan ini?')) return;
+        try {
+            const res = await fetch(`/api/chat/${id}`, { method: 'DELETE', headers: authHeaders() });
+            const json = await res.json();
+            if (json.success) setMessages((prev) => prev.filter((m) => m.id !== id));
+            else setSendError(json.message || 'Gagal menghapus pesan.');
+        } catch {
+            setSendError('Tidak dapat terhubung ke server.');
+        }
+    };
+
+    const handleClear = async () => {
+        if (!window.confirm('Hapus seluruh riwayat chat ini? Tindakan tidak bisa dibatalkan.')) return;
+        try {
+            const res = await fetch('/api/chat/thread', { method: 'DELETE', headers: authHeaders() });
+            const json = await res.json();
+            if (json.success) setMessages([]);
+            else setSendError(json.message || 'Gagal menghapus riwayat.');
+        } catch {
+            setSendError('Tidak dapat terhubung ke server.');
+        }
+    };
+
     if (loading) return <DriverLayout><div className="flex items-center justify-center h-[60vh]"><div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" /></div></DriverLayout>;
 
     if (!driver) {
@@ -124,7 +152,7 @@ export default function DriverChat() {
         <DriverLayout>
             <div className="space-y-5">
                 <PageHeader eyebrow="Bantuan" title="Chat Admin" description="Lapor kendala atau tanya apa pun — admin membalas langsung di sini."
-                    action={<span className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border ${connected ? 'bg-success-500/10 border-success-500/30 text-success-500' : 'bg-dark-100/60 border-dark-200/70 text-dark-500'}`}><span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-success-400 animate-pulse' : 'bg-dark-500'}`} />{connected ? 'Live' : 'Polling'}</span>} />
+                    action={<div className="flex items-center gap-2"><span className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border ${connected ? 'bg-success-500/10 border-success-500/30 text-success-500' : 'bg-dark-100/60 border-dark-200/70 text-dark-500'}`}><span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-success-400 animate-pulse' : 'bg-dark-500'}`} />{connected ? 'Live' : 'Polling'}</span><button onClick={handleClear} title="Hapus seluruh riwayat" className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full glass glass-hover text-dark-500 hover:text-danger-500"><Trash2 className="w-3.5 h-3.5" />Hapus</button></div>} />
                 <div className="glass rounded-3xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 300px)', minHeight: '420px' }}>
                     <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
                         {messages.length === 0 ? (
@@ -136,7 +164,13 @@ export default function DriverChat() {
                         ) : messages.map((m) => {
                             const mine = m.sender_role === 'driver';
                             return (
-                                <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                                <div key={m.id} className={`flex items-center gap-1 group ${mine ? 'justify-end' : 'justify-start'}`}>
+                                    {mine && (
+                                        <button onClick={() => handleDelete(m.id)} title="Hapus pesan"
+                                            className="p-1.5 rounded-lg text-dark-300 hover:text-danger-500 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity flex-shrink-0">
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
                                     <div className={`max-w-[80%] sm:max-w-[70%] rounded-2xl px-3.5 py-2.5 ${mine ? 'bg-gradient-to-r from-success-500 to-accent-500 text-white rounded-br-md' : 'glass-strong text-dark-900 rounded-bl-md'}`}>
                                         {!mine && <p className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-0.5">Admin</p>}
                                         <p className="text-sm whitespace-pre-wrap break-words">{m.body}</p>
