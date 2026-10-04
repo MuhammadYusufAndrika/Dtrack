@@ -564,7 +564,7 @@ export default function DriverDashboard() {
                         <div className="glass rounded-3xl p-5">
                             <h3 className="text-xs font-bold uppercase tracking-widest text-dark-400 mb-4">Profil Driver</h3>
                             <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-success-500 to-accent-600 flex items-center justify-center font-display font-bold text-white text-lg">{driver.name[0]}</div>
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-success-500 to-accent-500 flex items-center justify-center font-display font-bold text-white text-lg">{driver.name[0]}</div>
                                 <div className="min-w-0"><p className="text-sm font-bold text-dark-900 truncate">{driver.name}</p><p className="text-xs text-dark-400 truncate">{driver.email}</p></div>
                             </div>
                             <div className="space-y-2.5">

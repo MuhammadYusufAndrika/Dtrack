@@ -100,7 +100,7 @@ export default function AdminLayout({ children }) {
                         return (
                             <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)}
                                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative overflow-hidden ${active ? 'text-white shadow-[0_8px_24px_rgba(37,99,235,0.4)]' : 'text-dark-400 hover:text-dark-900 hover:bg-dark-100/70'}`}>
-                                {active && <span className="absolute inset-0 bg-gradient-to-r from-primary-600 to-violet-600 opacity-90" />}
+                                {active && <span className="absolute inset-0 bg-gradient-to-r from-primary-600 to-violet-500 opacity-90" />}
                                 {active && <span className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/10 to-white/10" />}
                                 <Icon className="w-[18px] h-[18px] flex-shrink-0 relative" />
                                 {!collapsed && <span className="relative">{item.label}</span>}
@@ -112,7 +112,7 @@ export default function AdminLayout({ children }) {
 
                 <div className="p-3 border-t border-dark-200/60">
                     <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-dark-400 hover:text-dark-900 hover:bg-dark-100/70 transition-all w-full">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-violet-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">A</div>
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-violet-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">A</div>
                         {!collapsed && <div className="min-w-0 text-left flex-1"><p className="text-sm font-semibold text-dark-900 truncate">Administrator</p><p className="text-[11px] text-dark-500 flex items-center gap-1"><LogOut className="w-3 h-3" /> Keluar</p></div>}
                     </button>
                 </div>

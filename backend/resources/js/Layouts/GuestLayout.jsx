@@ -11,7 +11,7 @@ export default function GuestLayout({ children }) {
             </div>
 
             <div className="relative w-full max-w-5xl mx-auto grid md:grid-cols-2 glass-strong rounded-3xl overflow-hidden animate-fade-up">
-                <div className="hidden md:flex flex-col justify-between p-8 relative overflow-hidden bg-gradient-to-br from-primary-600 via-violet-600 to-accent-500">
+                <div className="hidden md:flex flex-col justify-between p-8 relative overflow-hidden bg-gradient-to-br from-primary-600 via-violet-500 to-accent-500">
                     <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/20 blur-3xl" />
                     <div className="absolute -bottom-24 -left-16 w-72 h-72 rounded-full bg-white/10 blur-3xl" />
                     <div className="relative flex items-center gap-3">
