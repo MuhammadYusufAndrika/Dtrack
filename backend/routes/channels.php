@@ -13,3 +13,7 @@ Broadcast::channel('driver.{id}', function ($user, $id) {
 Broadcast::channel('alerts', function ($user) {
     return true;
 });
+
+Broadcast::channel('chat.driver.{id}', function ($user, $id) {
+    return true;
+});

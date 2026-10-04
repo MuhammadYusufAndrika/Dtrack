@@ -12,6 +12,7 @@ Route::get('/admin/drivers', fn () => Inertia::render('Admin/Drivers'))->name('a
 Route::get('/admin/drivers/{id}', fn ($id) => Inertia::render('Admin/DriversShow', ['id' => (int) $id]))->name('admin.drivers.show');
 Route::get('/admin/trips', fn () => Inertia::render('Admin/Trips'))->name('admin.trips');
 Route::get('/admin/alerts', fn () => Inertia::render('Admin/Alerts'))->name('admin.alerts');
+Route::get('/admin/chat', fn () => Inertia::render('Admin/Chat'))->name('admin.chat');
 Route::get('/admin/settings', fn () => Inertia::render('Admin/Settings'))->name('admin.settings');
 
 Route::get('/track', fn () => Inertia::render('Customer/Track'))->name('customer.track');
@@ -19,6 +20,7 @@ Route::get('/track', fn () => Inertia::render('Customer/Track'))->name('customer
 Route::get('/driver', fn () => Inertia::render('Driver/Dashboard'))->name('driver.dashboard');
 Route::get('/driver/trips', fn () => Inertia::render('Driver/Trips'))->name('driver.trips');
 Route::get('/driver/alerts', fn () => Inertia::render('Driver/Alerts'))->name('driver.alerts');
+Route::get('/driver/chat', fn () => Inertia::render('Driver/Chat'))->name('driver.chat');
 
 Route::get('/.well-known/assetlinks.json', function () {
     $fingerprints = config('twa.fingerprints', []);

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AIController;
 use App\Http\Controllers\Api\AlertController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DriverController;
 use App\Http\Controllers\Api\LocationController;
@@ -37,5 +38,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/alerts/{alert}/read', [AlertController::class, 'markAsRead']);
 
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+    Route::get('/chat', [ChatController::class, 'index']);
+    Route::get('/chat/threads', [ChatController::class, 'threads']);
+    Route::post('/chat', [ChatController::class, 'store']);
+    Route::patch('/chat/read', [ChatController::class, 'markRead']);
 });
 

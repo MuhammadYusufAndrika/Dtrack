@@ -44,7 +44,7 @@ class AIService
 
         if ($session && $session->driver_id) {
             broadcast(new DriverStatusChanged(
-                driverId: $session->driver_id,
+                driver_id: $session->driver_id,
                 statusData: $statusData,
             ))->toOthers();
         }

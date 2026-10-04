@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
-import { LayoutDashboard, Route, Bell, Menu, ChevronLeft, LogOut, Navigation, Search } from 'lucide-react';
+import { LayoutDashboard, Route, Bell, Menu, ChevronLeft, LogOut, Navigation, Search, MessageCircle } from 'lucide-react';
 
 const navItems = [
     { href: '/driver', label: 'My Dashboard', icon: LayoutDashboard },
     { href: '/driver/trips', label: 'My Trips', icon: Route },
+    { href: '/driver/chat', label: 'Chat Admin', icon: MessageCircle },
     { href: '/driver/alerts', label: 'Alerts', icon: Bell },
 ];
 

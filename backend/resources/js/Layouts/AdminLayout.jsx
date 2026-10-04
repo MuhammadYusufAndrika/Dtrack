@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import {
     LayoutDashboard, Truck, Users, Route, Bell, Settings,
-    Menu, ChevronLeft, LogOut, Search, Radar,
+    Menu, ChevronLeft, LogOut, Search, Radar, MessageCircle,
 } from 'lucide-react';
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
     { href: '/admin/fleet', label: 'Fleet', icon: Truck },
     { href: '/admin/drivers', label: 'Drivers', icon: Users },
     { href: '/admin/trips', label: 'Trips', icon: Route },
+    { href: '/admin/chat', label: 'Chat', icon: MessageCircle },
     { href: '/admin/alerts', label: 'Alerts', icon: Bell },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
