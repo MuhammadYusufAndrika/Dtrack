@@ -110,6 +110,12 @@ export default function Drivers() {
             d.vehicle ? <div className="flex items-center gap-2"><Truck className="w-3.5 h-3.5 text-dark-400" /><span className="text-sm text-dark-700">{d.vehicle.plate_number}</span></div>
             : <span className="text-sm text-dark-500">—</span>
         )},
+        { key: 'aksi', header: 'Aksi', render: (d) => (
+            <button onClick={() => handleDelete(d.id, d.name)} title="Hapus driver + akun loginnya"
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl glass glass-hover text-danger-500">
+                <Trash2 className="w-3.5 h-3.5" /> Hapus
+            </button>
+        )},
     ];
 
     const shown = tab === 'pending' ? pending : drivers;

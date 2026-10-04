@@ -6,6 +6,7 @@ import PageHeader from '../../Components/PageHeader';
 import { PageLoader } from '../../Components/LoadingSpinner';
 import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
 import MapTiles from '../../Components/MapTiles';
+import { Plus, X } from 'lucide-react';
 import L from 'leaflet';
 
 const vehicleIcon = L.divIcon({
@@ -42,6 +43,11 @@ function Updater({ vehicles }) {
 export default function Fleet() {
     const [vehicles, setVehicles] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showForm, setShowForm] = useState(false);
+    const [form, setForm] = useState({ plate_number: '', vehicle_id: '', brand: '', model: '', year: new Date().getFullYear(), type: 'truck', status: 'active' });
+    const [saving, setSaving] = useState(false);
+    const [formError, setFormError] = useState('');
+    const [notice, setNotice] = useState('');
     const [liveLocations, setLiveLocations] = useState({}); // { vehicle_id: { latitude, longitude, speed, heading, timestamp } }
     const [wsConnected, setWsConnected] = useState(false);
     const intervalRef = useRef(null);
@@ -143,6 +149,40 @@ export default function Fleet() {
     const activeVehicles = vehiclesWithLiveLocation.filter((v) => v.latest_location);
     const totalActive = activeVehicles.length;
 
+    const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+    const serverError = (json) => {
+        if (json?.errors) {
+            const first = Object.values(json.errors)[0];
+            if (Array.isArray(first) && first[0]) return first[0];
+        }
+        return json?.message || 'Gagal menyimpan.';
+    };
+
+    const handleCreate = async (e) => {
+        e.preventDefault();
+        setFormError('');
+        setSaving(true);
+        try {
+            const res = await apiFetch('/api/vehicles', {
+                method: 'POST',
+                body: JSON.stringify({ ...form, year: Number(form.year) }),
+            });
+            const json = await res.json();
+            if (!json.success) { setFormError(serverError(json)); return; }
+            setShowForm(false);
+            setForm({ plate_number: '', vehicle_id: '', brand: '', model: '', year: new Date().getFullYear(), type: 'truck', status: 'active' });
+            setNotice(`Unit ${json.data?.plate_number || ''} berhasil ditambahkan.`);
+            fetchData();
+        } catch {
+            setFormError('Tidak dapat terhubung ke server.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const inputCls = 'input-glass w-full rounded-xl px-3.5 py-2.5 text-sm text-dark-900 placeholder-dark-300';
+
     if (loading) return <AdminLayout><PageLoader /></AdminLayout>;
 
     return (
@@ -154,12 +194,19 @@ export default function Fleet() {
                     title="Fleet Live Map"
                     description={`${vehicles.length} unit — ${totalActive} dengan lokasi terkini.`}
                     action={
-                        <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl glass text-xs font-semibold text-dark-700">
-                            <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-success-400 animate-pulse' : 'bg-warning-400'}`} />
-                            {wsConnected ? 'Live WebSocket' : 'Polling 10s'}
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => { setShowForm(true); setFormError(''); setNotice(''); }}
+                                className="btn-glow flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-bold">
+                                <Plus className="w-4 h-4" /> Tambah Unit
+                            </button>
+                            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl glass text-xs font-semibold text-dark-700">
+                                <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-success-400 animate-pulse' : 'bg-warning-400'}`} />
+                                {wsConnected ? 'Live WebSocket' : 'Polling 10s'}
+                            </div>
                         </div>
                     }
                 />
+                {notice && <div className="glass rounded-2xl !border-success-500/30 p-3.5 text-sm text-success-500 animate-fade-up">✅ {notice}</div>}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     {/* Map */}
@@ -246,6 +293,62 @@ export default function Fleet() {
                         ))}
                     </div>
                 </div>
+
+                {showForm && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowForm(false)}>
+                        <div className="glass-strong rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-display text-lg font-bold text-dark-900">Tambah Kendaraan</h3>
+                                <button onClick={() => setShowForm(false)} className="p-2 rounded-xl glass glass-hover"><X className="w-4 h-4" /></button>
+                            </div>
+                            {formError && <div className="p-3 rounded-xl bg-danger-500/10 border border-danger-500/30 text-sm text-danger-500 mb-4">⚠️ {formError}</div>}
+                            <form onSubmit={handleCreate} className="space-y-3.5">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-400 mb-1.5">Plat nomor</label>
+                                        <input value={form.plate_number} onChange={(e) => set('plate_number', e.target.value)} required placeholder="B-1234-ABC" className={`${inputCls} font-mono uppercase`} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-400 mb-1.5">ID Unit</label>
+                                        <input value={form.vehicle_id} onChange={(e) => set('vehicle_id', e.target.value.toUpperCase())} required placeholder="TRK006" className={`${inputCls} font-mono uppercase`} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-400 mb-1.5">Merek</label>
+                                        <input value={form.brand} onChange={(e) => set('brand', e.target.value)} required placeholder="Volvo" className={inputCls} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-400 mb-1.5">Model</label>
+                                        <input value={form.model} onChange={(e) => set('model', e.target.value)} required placeholder="FH16" className={inputCls} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-400 mb-1.5">Tahun</label>
+                                        <input type="number" value={form.year} onChange={(e) => set('year', e.target.value)} required min={1990} max={2100} className={`${inputCls} font-mono`} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-400 mb-1.5">Tipe</label>
+                                        <input value={form.type} onChange={(e) => set('type', e.target.value)} required placeholder="truck" className={inputCls} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wider text-dark-400 mb-1.5">Status</label>
+                                        <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputCls}>
+                                            <option value="active">Aktif</option>
+                                            <option value="inactive">Nonaktif</option>
+                                            <option value="maintenance">Bengkel</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <p className="text-[11px] text-dark-400">ID Unit (cth. TRK006) dipakai AI service sebagai kunci kamera — harus unik, lanjutkan saja nomor terakhir.</p>
+                                <button type="submit" disabled={saving} className="btn-glow w-full py-3 rounded-xl text-white text-sm font-bold disabled:opacity-60">
+                                    {saving ? 'Menyimpan…' : 'Simpan Kendaraan'}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
         </AdminLayout>
     );

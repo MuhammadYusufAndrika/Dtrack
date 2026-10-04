@@ -42,7 +42,9 @@ class Driver extends Model
 
     public function latestStatus()
     {
-        return $this->hasOne(DriverStatus::class)->latestOfMany('timestamp');
+        // FQCN eksplisit: nama Model (Models\DriverStatus) tabrakan dengan
+        // Enum (Enums\DriverStatus) yang di-import di atas untuk cast status.
+        return $this->hasOne(\App\Models\DriverStatus::class)->latestOfMany('timestamp');
     }
 
     public function scopeAvailable($query)

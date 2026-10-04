@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiFetch } from '../../utils/api';
+import { router } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
 import PageHeader from '../../Components/PageHeader';
 import { PageLoader } from '../../Components/LoadingSpinner';
 import StatusBadge from '../../Components/StatusBadge';
-import { User, Truck, Phone, Mail, FileText, Camera, AlertTriangle, Shield, Eye, Navigation, RefreshCw, Link2, Link2Off, Cigarette } from 'lucide-react';
+import { User, Truck, Phone, Mail, FileText, Camera, AlertTriangle, Shield, Eye, Navigation, RefreshCw, Link2, Link2Off, Cigarette, Trash2 } from 'lucide-react';
 
 // Hosting-ready: pakai VITE_AI_SERVICE_URL jika diset, kalau HTTPS pakai /ai (reverse proxy)
 // biar tidak kena mixed-content + firewall port 5000. Fallback ke http://host:5000 untuk local.
@@ -51,6 +52,7 @@ export default function DriversShow({ id }) {
     const [cameraFrame, setCameraFrame] = useState(null);
     const [aiResult, setAiResult] = useState(null);
     const [cameraError, setCameraError] = useState('');
+    const [deleting, setDeleting] = useState(false);
     const frameInterval = useRef(null);
     const cameraFrameUrl = useRef(null);
     const isFetchingFrame = useRef(false);
@@ -65,7 +67,6 @@ export default function DriversShow({ id }) {
     useEffect(() => {
         reloadDriver().finally(() => setLoading(false));
     }, [id]);
-
     // Fetch all vehicles so admin can pick one to assign
     useEffect(() => {
         apiFetch('/api/vehicles')
@@ -98,6 +99,22 @@ export default function DriversShow({ id }) {
             setAssignError('Network error');
         } finally {
             setAssigning(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!driver) return;
+        if (!window.confirm(`Hapus driver ${driver.name}? Akun login, trip, chat, dan datanya ikut terhapus. Kendaraan yang dipakai akan dilepas.`)) return;
+        setDeleting(true);
+        try {
+            const res = await apiFetch(`/api/drivers/${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (json.success) router.visit('/admin/drivers');
+            else setAssignError(json.message || 'Gagal menghapus driver.');
+        } catch {
+            setAssignError('Network error');
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -259,6 +276,18 @@ export default function DriversShow({ id }) {
                             </button>
                         )}
                     </div>
+                </div>
+
+                {/* Danger Zone */}
+                <div className="glass rounded-2xl p-4 !border-danger-500/20 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-dark-900">Hapus driver ini</p>
+                        <p className="text-xs text-dark-400">Akun login, trip, chat, dan status ikut terhapus. Kendaraan dilepas.</p>
+                    </div>
+                    <button onClick={handleDelete} disabled={deleting}
+                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-danger-500/10 border border-danger-500/30 text-danger-500 text-xs font-bold hover:bg-danger-500 hover:text-white transition-colors disabled:opacity-50 flex-shrink-0">
+                        <Trash2 className="w-4 h-4" /> {deleting ? 'Menghapus…' : 'Hapus Driver'}
+                    </button>
                 </div>
 
                 {/* Live Camera + AI Behavior Detection Panel */}
