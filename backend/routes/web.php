@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/login', fn () => Inertia::render('Login'))->name('login');
+Route::get('/register', fn () => Inertia::render('Register'))->name('register');
 
 Route::get('/admin', fn () => Inertia::render('Admin/Dashboard'))->name('admin.dashboard');
 Route::get('/admin/fleet', fn () => Inertia::render('Admin/Fleet'))->name('admin.fleet');

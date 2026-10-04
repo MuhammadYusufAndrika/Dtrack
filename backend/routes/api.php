@@ -24,9 +24,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
+    Route::get('/drivers-pending', [DriverController::class, 'pending']);
     Route::apiResource('vehicles', VehicleController::class);
     Route::apiResource('drivers', DriverController::class);
     Route::patch('/drivers/{driver}/assign-vehicle', [DriverController::class, 'assignVehicle']);
+    Route::patch('/drivers/{driver}/approve', [DriverController::class, 'approve']);
     Route::apiResource('trips', TripController::class);
     Route::apiResource('alerts', AlertController::class)->only(['index', 'show']);
 

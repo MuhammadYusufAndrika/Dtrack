@@ -179,6 +179,9 @@ export default function Login() {
                                 </button>
                             ))}
                         </div>
+                        <p className="text-center text-[11px] text-dark-400">
+                            Sopir baru? <button type="button" onClick={() => router.visit('/register')} className="font-bold text-primary-600 hover:underline">Daftar di sini</button>
+                        </p>
                     </form>
 
                     <div className="mt-6">

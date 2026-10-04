@@ -44,7 +44,9 @@ class AuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => 'required|email|unique:users,email|unique:drivers,email',
+            'phone' => 'required|string|max:20',
+            'license_number' => 'required|string|max:50|unique:drivers,license_number',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
@@ -53,10 +55,9 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Registration successful.',
+                'message' => 'Pendaftaran diterima. Akun Anda menunggu persetujuan admin sebelum bisa login.',
                 'data' => [
                     'user' => $result['user'],
-                    'token' => $result['token'],
                 ],
             ], 201);
         } catch (\Exception $e) {

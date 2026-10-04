@@ -29,19 +29,52 @@ class DriverController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:drivers,email',
+            'email' => 'required|email|unique:drivers,email|unique:users,email',
             'phone' => 'required|string|max:20',
             'license_number' => 'required|string|max:50|unique:drivers,license_number',
+            'password' => 'required|string|min:8',
             'photo_url' => 'nullable|string|max:500',
         ]);
 
-        $driver = $this->driverService->registerDriver($validated);
+        $driver = $this->driverService->createDriverWithAccount($validated);
 
         return response()->json([
             'success' => true,
-            'message' => 'Driver registered successfully.',
+            'message' => 'Driver + akun login berhasil dibuat. Sopir bisa langsung login.',
             'data' => new DriverResource($driver),
         ], 201);
+    }
+
+    /** Daftar sopir menunggu persetujuan (admin saja). */
+    public function pending(Request $request): JsonResponse
+    {
+        if (($request->user()->role ?? null) !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Forbidden.', 'data' => null], 403);
+        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Pending drivers retrieved successfully.',
+            'data' => DriverResource::collection($this->driverService->getPendingDrivers()),
+        ]);
+    }
+
+    /** Setujui sopir (admin saja). */
+    public function approve(Request $request, $id): JsonResponse
+    {
+        if (($request->user()->role ?? null) !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Forbidden.', 'data' => null], 403);
+        }
+        try {
+            $result = $this->driverService->approveDriver($id);
+            return response()->json([
+                'success' => true,
+                'message' => 'Driver disetujui, sudah bisa login.'
+                    . ($result['temp_password'] ? ' Password sementara: ' . $result['temp_password'] : ''),
+                'data' => new DriverResource($result['driver']),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Driver not found.', 'data' => null], 404);
+        }
     }
 
     public function show($id): JsonResponse
