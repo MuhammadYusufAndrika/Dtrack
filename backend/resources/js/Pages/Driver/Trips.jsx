@@ -11,27 +11,28 @@ export default function DriverTrips() {
     const [loading, setLoading] = useState(true);
     const [detailId, setDetailId] = useState(null);
 
+    const loadTrips = async () => {
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
+        try {
+            const meRes = await fetch('/api/auth/me', { headers });
+            const meJson = await meRes.json();
+            const email = meJson.data?.email;
+            if (!email) return;
+
+            const dRes = await fetch('/api/drivers', { headers });
+            const dJson = await dRes.json();
+            const myDriver = dJson.data?.find((d) => d.email === email);
+            if (!myDriver) return;
+
+            const tRes = await fetch('/api/trips', { headers });
+            const tJson = await tRes.json();
+            setTrips(tJson.data?.filter((t) => t.driver_id === myDriver.id) || []);
+        } catch {}
+    };
+
     useEffect(() => {
-        (async () => {
-            const token = localStorage.getItem('token');
-            const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
-            try {
-                const meRes = await fetch('/api/auth/me', { headers });
-                const meJson = await meRes.json();
-                const email = meJson.data?.email;
-                if (!email) return;
-
-                const dRes = await fetch('/api/drivers', { headers });
-                const dJson = await dRes.json();
-                const myDriver = dJson.data?.find((d) => d.email === email);
-                if (!myDriver) return;
-
-                const tRes = await fetch('/api/trips', { headers });
-                const tJson = await tRes.json();
-                setTrips(tJson.data?.filter((t) => t.driver_id === myDriver.id) || []);
-            } catch {}
-            setLoading(false);
-        })();
+        loadTrips().finally(() => setLoading(false));
     }, []);
 
     if (loading) return <DriverLayout><div className="flex items-center justify-center h-[60vh]"><div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" /></div></DriverLayout>;
@@ -73,7 +74,7 @@ export default function DriverTrips() {
                                 <h3 className="font-display text-lg font-bold text-dark-900">History Perjalanan</h3>
                                 <button onClick={() => setDetailId(null)} className="p-2 rounded-xl glass glass-hover"><X className="w-4 h-4" /></button>
                             </div>
-                            <TripDetail tripId={detailId} />
+                            <TripDetail tripId={detailId} onDeleted={() => { setDetailId(null); loadTrips(); }} />
                         </div>
                     </div>
                 )}

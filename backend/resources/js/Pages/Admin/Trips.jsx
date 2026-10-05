@@ -457,7 +457,7 @@ export default function Trips() {
                         {detailId && <span className="text-[11px] text-dark-400">Klik History di tabel untuk ganti trip</span>}
                     </div>
                     {detailId ? (
-                        <TripDetail key={detailId} tripId={detailId} fetchFn={(url, opts) => apiFetch(url, opts)} />
+                        <TripDetail key={detailId} tripId={detailId} fetchFn={(url, opts) => apiFetch(url, opts)} onDeleted={() => { loadTrips(); setDetailId(null); }} />
                     ) : (
                         <p className="text-sm text-dark-400 py-8 text-center">Belum ada trip — buat trip dulu atau tunggu sopir jalan.</p>
                     )}

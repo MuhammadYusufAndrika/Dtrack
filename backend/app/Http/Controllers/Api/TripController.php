@@ -119,4 +119,29 @@ class TripController extends Controller
             ], 404);
         }
     }
+
+    /**
+     * Hapus history 1 trip (hemat DB). Admin: semua trip.
+     * Sopir: hanya trip miliknya.
+     */
+    public function destroy(Request $request, $id): JsonResponse
+    {
+        try {
+            $trip = $this->tripService->getTripById($id);
+            if (!$trip) {
+                return response()->json(['success' => false, 'message' => 'Trip not found.', 'data' => null], 404);
+            }
+            $user = $request->user();
+            if (($user->role ?? null) !== 'admin') {
+                $driver = \App\Models\Driver::where('email', $user->email)->first();
+                if (!$driver || (int) $trip->driver_id !== (int) $driver->id) {
+                    return response()->json(['success' => false, 'message' => 'Forbidden.', 'data' => null], 403);
+                }
+            }
+            $this->tripService->deleteTrip($id);
+            return response()->json(['success' => true, 'message' => 'Trip dihapus.', 'data' => ['id' => (int) $id]]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Trip not found.', 'data' => null], 404);
+        }
+    }
 }

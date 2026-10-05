@@ -13,6 +13,7 @@ from services.detection_service import DetectionService
 from services.stream_service import StreamService
 from services.communication_service import CommunicationService
 from routes.inference_routes import router as inference_router, set_services, _store_frame, _store_frame_fast, _inference_lock
+from services.recording_service import purge_old
 from routes.vehicle_routes import router as vehicle_router
 from utils.logger import setup_logger
 
@@ -70,6 +71,7 @@ async def lifespan(app: FastAPI):
             logger.info("Continuous inference loop skipped (API-only mode)")
 
         logger.info("FleetVision AI Service ready")
+        purge_old()  # bersihkan rekaman lewat retensi saat start
     except Exception as e:
         logger.error(f"Startup failed: {e}")
         raise

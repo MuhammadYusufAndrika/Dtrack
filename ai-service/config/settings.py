@@ -20,6 +20,15 @@ class Settings(BaseSettings):
     SMOKING_MODEL_PATH: str = "models/weights/smoking_yolo.pt"
     SMOKING_MODEL_URL: str = "https://huggingface.co/basant18/Smoking-detection-YOLO26s/resolve/main/weights/best.pt"
     SMOKING_CONFIDENCE: float = 0.4
+    # Perekaman video dari frame yang masuk (timelapse bukti per trip).
+    # Frame web ~2 FPS / APK ~1.25 FPS -> video memang ala timelapse, bukan 30 FPS.
+    RECORDINGS_ENABLED: bool = True
+    RECORDINGS_DIR: str = "storage/recordings"
+    RECORD_SEGMENT_SECONDS: int = 600
+    RECORD_FPS: float = 2.0
+    RECORD_FRAME_WIDTH: int = 640
+    RECORD_FRAME_HEIGHT: int = 480
+    RECORD_RETENTION_DAYS: int = 30
 
     class Config:
         env_file = ".env"

@@ -8,10 +8,11 @@ from datetime import datetime
 from typing import Optional, Dict
 
 from fastapi import APIRouter, UploadFile, File, WebSocket, WebSocketDisconnect, Depends
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 
 from models.inference_result import InferenceResult
 from utils.logger import setup_logger
+from services.recording_service import get_recording_service, purge_old
 
 logger = setup_logger(__name__)
 
@@ -76,6 +77,11 @@ def _store_frame(vehicle_id: str, frame: np.ndarray, result=None):
 def _store_frame_fast(vehicle_id: str, frame: np.ndarray):
     """Simpan frame mentah SEGERA sebelum inference (decouple display FPS dari AI latency)."""
     _store_frame(vehicle_id, frame, result=None)
+    # Rekam ke MP4 di sini agar SEMUA sumber (WS web, POST APK, loop server) otomatis terekam.
+    try:
+        get_recording_service().record(vehicle_id, frame)
+    except Exception:
+        pass
 
 
 def _update_result(vehicle_id: str, result):
@@ -318,3 +324,58 @@ async def service_status() -> JSONResponse:
         "active_vehicles": active_vehicles,
         "timestamp": datetime.utcnow().isoformat(),
     })
+
+
+def _parse_iso(value: Optional[str]):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+    except (ValueError, AttributeError):
+        return None
+
+
+@router.get("/recordings/{vehicle_id}")
+async def list_recordings(vehicle_id: str, from_time: Optional[str] = None,
+                          to_time: Optional[str] = None) -> JSONResponse:
+    """Daftar segmen MP4 rekaman. Filter overlap rentang trip via ?from_time=&to_time= (ISO)."""
+    segments = get_recording_service().list_segments(
+        vehicle_id,
+        from_ts=_parse_iso(from_time),
+        to_ts=_parse_iso(to_time),
+    )
+    base = f"/inference/recordings/{vehicle_id}"
+    for s in segments:
+        s["url"] = f"{base}/{s['file']}"
+    return JSONResponse(content={"vehicle_id": vehicle_id, "recordings": segments})
+
+
+@router.get("/recordings/{vehicle_id}/{filename}")
+async def get_recording(vehicle_id: str, filename: str):
+    """Unduh/stream 1 segmen video (mendukung range request untuk seek)."""
+    path = get_recording_service().resolve_path(vehicle_id, filename)
+    if path is None:
+        return JSONResponse(status_code=404, content={"error": "Recording not found"})
+    media_type = "video/webm" if filename.lower().endswith(".webm") else "video/mp4"
+    return FileResponse(path, media_type=media_type, filename=filename)
+
+
+@router.delete("/recordings/{vehicle_id}/{filename}")
+async def delete_recording(vehicle_id: str, filename: str) -> JSONResponse:
+    """Hapus 1 file segmen (hemat disk)."""
+    ok = get_recording_service().delete_file(vehicle_id, filename)
+    if not ok:
+        return JSONResponse(status_code=404, content={"error": "Recording not found"})
+    return JSONResponse(content={"success": True, "deleted": filename})
+
+
+@router.delete("/recordings/{vehicle_id}")
+async def delete_recordings_range(vehicle_id: str, from_time: Optional[str] = None,
+                                  to_time: Optional[str] = None) -> JSONResponse:
+    """Hapus semua segmen yang overlap rentang (dipakai saat hapus 1 trip)."""
+    count = get_recording_service().delete_range(
+        vehicle_id,
+        from_ts=_parse_iso(from_time),
+        to_ts=_parse_iso(to_time),
+    )
+    return JSONResponse(content={"success": True, "deleted_count": count})

@@ -53,9 +53,11 @@ services:
       - "5000:5000"
     volumes:
       - ai_service_data:/app/models/weights
+      - ai_recordings_data:/app/storage/recordings
     restart: unless-stopped
 
 volumes:
   mysql_data:
   redis_data:
   ai_service_data:
+  ai_recordings_data:

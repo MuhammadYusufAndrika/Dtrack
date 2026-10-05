@@ -178,4 +178,14 @@ class TripService
             ->latest()
             ->get();
     }
+
+    // Hapus trip + sesi terkait (lokasi ikut cascade). Dipakai untuk hemat DB.
+    public function deleteTrip($id): bool
+    {
+        return DB::transaction(function () use ($id) {
+            $trip = $this->tripRepository->findOrFail($id);
+            DrivingSession::where('trip_id', $trip->id)->delete();
+            return $this->tripRepository->delete($id);
+        });
+    }
 }

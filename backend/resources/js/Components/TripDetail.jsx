@@ -4,7 +4,15 @@ import MapTiles from './MapTiles';
 import StatusBadge from './StatusBadge';
 import L from 'leaflet';
 import { haversineKm, fetchRoadRoute, straightLine, formatKm, matchRoadTrail } from '../utils/route';
-import { Route, Gauge, Clock, Flag, Navigation } from 'lucide-react';
+import { Route, Gauge, Clock, Flag, Navigation, Video } from 'lucide-react';
+
+function resolveAiBase() {
+    const envUrl = import.meta.env?.VITE_AI_SERVICE_URL;
+    if (envUrl) return envUrl.replace(/\/$/, '');
+    const { protocol, hostname } = window.location;
+    if (protocol === 'https:') return `https://${hostname}/ai`;
+    return `http://${hostname}:5000`;
+}
 
 const originIcon = L.divIcon({ className: '', html: '<div style="width:32px;height:32px;background:linear-gradient(135deg,#22c55e,#06b6d4);border:3px solid #fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;">📍</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
 const destIcon = L.divIcon({ className: '', html: '<div style="width:32px;height:32px;background:linear-gradient(135deg,#f59e0b,#ef4444);border:3px solid #fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;">🎯</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
@@ -33,14 +41,28 @@ const fmtDur = (start, end) => {
  * Menampilkan rute rencana (assign admin) + jejak GPS aktual + km ditempuh.
  * Trip manual sopir (tanpa tujuan) tetap tampil jejak + km-nya.
  */
-export default function TripDetail({ tripId, fetchFn }) {
+export default function TripDetail({ tripId, fetchFn, onDeleted }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [planCoords, setPlanCoords] = useState([]);
     const [snappedTrail, setSnappedTrail] = useState(null);
+    const [recordings, setRecordings] = useState([]);
+    const [recLoading, setRecLoading] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
-    const doFetch = fetchFn || ((url, opts) => fetch(url, opts));
+    const doFetch = fetchFn || ((url, opts = {}) => {
+        // Default: sertakan token Bearer (halaman sopir tidak mengoper fetchFn).
+        const token = localStorage.getItem('token');
+        return fetch(url, {
+            ...opts,
+            headers: {
+                Accept: 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(opts.headers || {}),
+            },
+        });
+    });
 
     useEffect(() => {
         let cancelled = false;
@@ -74,8 +96,62 @@ export default function TripDetail({ tripId, fetchFn }) {
         return () => { cancelled = true; };
     }, [data?.trip?.id]);
 
-    // Tempelkan jejak ke jalan agar mengikuti rute asli, bukan garis lurus.
-    // (Di atas early-return agar urutan hooks stabil.)
+    // Rekaman video trip ini (filter rentang waktu trip).
+    const loadRecordings = () => {
+        const code = data?.trip?.vehicle?.vehicle_id;
+        if (!code) return;
+        setRecLoading(true);
+        const q = new URLSearchParams();
+        if (data.trip.start_time) q.set('from_time', new Date(data.trip.start_time).toISOString());
+        if (data.trip.end_time) q.set('to_time', new Date(data.trip.end_time).toISOString());
+        fetch(`${resolveAiBase()}/inference/recordings/${encodeURIComponent(code)}?${q.toString()}`, { cache: 'no-store' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((j) => setRecordings(j?.recordings || []))
+            .catch(() => {})
+            .finally(() => setRecLoading(false));
+    };
+    useEffect(() => {
+        loadRecordings();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data?.trip?.id]);
+
+    const handleDeleteRecording = async (file) => {
+        if (!window.confirm(`Hapus rekaman ${file}? File video di server ikut terhapus.`)) return;
+        const code = data?.trip?.vehicle?.vehicle_id;
+        if (!code) return;
+        try {
+            await fetch(`${resolveAiBase()}/inference/recordings/${encodeURIComponent(code)}/${encodeURIComponent(file)}`, { method: 'DELETE' });
+            loadRecordings();
+        } catch {}
+    };
+
+    const handleDeleteTrip = async () => {
+        if (!window.confirm(`Hapus Trip #${tripId} beserta rekaman videonya? History GPS + file di server ikut terhapus, tidak bisa dibatalkan.`)) return;
+        setDeleting(true);
+        try {
+            const res = await doFetch(`/api/trips/${tripId}`, { method: 'DELETE' });
+            const json = await res.json().catch(() => null);
+            if (json?.success) {
+                // Hapus juga rekaman pada rentang trip ini (hemat disk).
+                try {
+                    const code = data?.trip?.vehicle?.vehicle_id;
+                    if (code) {
+                        const q = new URLSearchParams();
+                        if (data.trip.start_time) q.set('from_time', new Date(data.trip.start_time).toISOString());
+                        if (data.trip.end_time) q.set('to_time', new Date(data.trip.end_time).toISOString());
+                        await fetch(`${resolveAiBase()}/inference/recordings/${encodeURIComponent(code)}?${q.toString()}`, { method: 'DELETE' });
+                    }
+                } catch {}
+                if (onDeleted) onDeleted(tripId);
+            } else {
+                alert(json?.message || 'Gagal menghapus trip.');
+            }
+        } catch {
+            alert('Tidak dapat terhubung ke server.');
+        } finally {
+            setDeleting(false);
+        }
+    };
     const rawTrail = (data?.path || [])
         .map((p) => [Number(p.latitude), Number(p.longitude)])
         .filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b));
@@ -166,6 +242,50 @@ export default function TripDetail({ tripId, fetchFn }) {
                 {t.status === 'PLANNED' && <span>Belum jalan — belum ada jejak GPS.</span>}
                 {path_source === 'timerange' && <span>Jejak diambil dari rentang waktu (sesi tak tertaut).</span>}
                 {trail.length === 0 && t.status !== 'PLANNED' && <span className="font-semibold text-warning-500">Belum ada titik GPS untuk trip ini — pastikan trip sudah dimulai dan GPS kendaraan terkirim.</span>}
+            </div>
+
+            <div className="glass rounded-2xl p-4">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-dark-400 mb-3 flex items-center gap-1.5">
+                    <Video className="w-4 h-4" /> Rekaman kamera trip ini
+                </h4>
+                {recLoading ? (
+                    <p className="text-xs text-dark-400">Memuat daftar rekaman…</p>
+                ) : recordings.length === 0 ? (
+                    <p className="text-xs text-dark-400">
+                        Belum ada rekaman pada rentang trip ini. Rekaman dibuat otomatis dari frame kamera
+                        yang masuk saat trip berjalan (kualitas timelapse ±2 FPS).
+                    </p>
+                ) : (
+                    <div className="space-y-3">
+                        {recordings.map((rec) => {
+                            const url = `${resolveAiBase()}${rec.url}`;
+                            const label = new Date(rec.start).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                            return (
+                                <div key={rec.file} className="rounded-xl overflow-hidden border border-dark-200/60">
+                                    <video src={url} controls preload="none" className="w-full max-h-64 bg-black" />
+                                    <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs">
+                                        <span className="text-dark-500">{label} · {rec.size_kb} KB</span>
+                                        <span className="flex items-center gap-3 flex-shrink-0">
+                                            <a href={url} download={rec.file} className="font-bold text-primary-600 hover:underline">Unduh Video</a>
+                                            <button onClick={() => handleDeleteRecording(rec.file)} className="font-bold text-danger-500 hover:underline">Hapus</button>
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            <div className="glass rounded-2xl p-4 !border-danger-500/20 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-dark-900">Hapus history trip ini</p>
+                    <p className="text-xs text-dark-400">Trip + jejak GPS + rekaman videonya ikut terhapus (hemat DB & disk).</p>
+                </div>
+                <button onClick={handleDeleteTrip} disabled={deleting}
+                    className="px-4 py-2.5 rounded-xl bg-danger-500/10 border border-danger-500/30 text-danger-500 text-xs font-bold hover:bg-danger-500 hover:text-white transition-colors disabled:opacity-50 flex-shrink-0">
+                    {deleting ? 'Menghapus…' : 'Hapus Trip'}
+                </button>
             </div>
         </div>
     );
