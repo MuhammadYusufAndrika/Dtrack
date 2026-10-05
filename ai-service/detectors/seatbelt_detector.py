@@ -188,8 +188,19 @@ class SeatbeltDetector(BaseDetector):
         return False
 
     # -------------------------------------------------------------- pipelines
-    def _raw_yolo_belt(self, frame: np.ndarray):
-        """Primer YOLO khusus. Return True/False/None(butuh fallback)."""
+    @staticmethod
+    def _brighten(frame: np.ndarray) -> np.ndarray:
+        """Naikkan exposure via CLAHE di kanal L (LAB) untuk frame kabin malam."""
+        try:
+            lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+            l, a, b = cv2.split(lab)
+            clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+            return cv2.cvtColor(cv2.merge([clahe.apply(l), a, b]), cv2.COLOR_LAB2BGR)
+        except Exception:
+            return frame
+
+    def _yolo_predict(self, frame: np.ndarray):
+        """Satu pass YOLO. Return (True/False/None, confidence)."""
         if self._belt_model is None:
             return None, 0.0
         try:
@@ -208,13 +219,26 @@ class SeatbeltDetector(BaseDetector):
                     elif cls_id == self.CLS_WITHOUT:
                         best_without = max(best_without, conf)
             if best_with <= 0 and best_without <= 0:
-                return None, 0.0  # tak ada orang terdeteksi -> fallback
+                return None, 0.0  # tak ada orang terdeteksi
             if best_with >= best_without:
                 return True, best_with
             return False, best_without
         except Exception as e:
             print(f"SeatbeltDetector YOLO error: {e}")
             return None, 0.0
+
+    def _raw_yolo_belt(self, frame: np.ndarray):
+        """Primer YOLO + TTA terang. Return True/False/None(butuh fallback)."""
+        belt, conf = self._yolo_predict(frame)
+        if belt is True:
+            return True, conf, "yolo_seatbelt"
+        # Coba versi terang (kabin malam / backlight): murah (~0.1 dtk).
+        belt_b, conf_b = self._yolo_predict(self._brighten(frame))
+        if belt_b is True:
+            return True, conf_b, "yolo_seatbelt+bright"
+        if belt is False or belt_b is False:
+            return False, max(conf, conf_b), "yolo_seatbelt"
+        return None, 0.0, "yolo_seatbelt"
 
     def _raw_classical(self, frame: np.ndarray, gray: np.ndarray,
                        edges: np.ndarray) -> dict:
@@ -266,23 +290,40 @@ class SeatbeltDetector(BaseDetector):
                 "confidence": 0.0, "landmarks_visible": False}
 
     def _raw_detect(self, frame: np.ndarray) -> dict:
-        """Deteksi mentah per-frame. seatbelt bisa True/False/None (unknown)."""
+        """Ensemble recall-first: YOLO (asli+terang) ATAU klasik.
+
+        - Salah satu bilang True -> True (sabuk jangan sampai luput).
+        - Keduanya False -> False. Semua unknown -> None (tahan status lama).
+        """
         h, w = frame.shape[:2]
         if h < 160 or w < 160:
             return {"seatbelt": None, "method": "frame_too_small",
                     "confidence": 0.0, "landmarks_visible": False}
 
-        # 1) Primer: YOLO khusus sabuk
-        belt, conf = self._raw_yolo_belt(frame)
-        if belt is not None:
-            return {"seatbelt": belt, "method": "yolo_seatbelt",
-                    "confidence": round(float(conf), 2),
+        # 1) YOLO khusus (asli + versi terang)
+        yolo_belt, yolo_conf, yolo_method = self._raw_yolo_belt(frame)
+        if yolo_belt is True:
+            return {"seatbelt": True, "method": yolo_method,
+                    "confidence": round(float(yolo_conf), 2),
                     "landmarks_visible": False}
 
-        # 2) Fallback klasik
+        # 2) Klasik selalu dihitung sebagai pembanding (bukan cuma fallback).
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         edges = self._adaptive_edges(gray)
-        return self._raw_classical(frame, gray, edges)
+        cls = self._raw_classical(frame, gray, edges)
+        cls_belt, cls_method = cls.get("seatbelt"), cls.get("method", "classical")
+        if cls_belt is True:
+            return {"seatbelt": True, "method": f"{cls_method}+yolo_checked",
+                    "confidence": max(float(cls.get("confidence", 0.6)), float(yolo_conf)),
+                    "landmarks_visible": bool(cls.get("landmarks_visible", False))}
+
+        if yolo_belt is False or cls_belt is False:
+            return {"seatbelt": False, "method": f"{yolo_method}+{cls_method}",
+                    "confidence": round(float(max(yolo_conf, cls.get("confidence", 0.0))), 2),
+                    "landmarks_visible": bool(cls.get("landmarks_visible", False))}
+
+        return {"seatbelt": None, "method": f"{yolo_method}+{cls_method}",
+                "confidence": 0.0, "landmarks_visible": False}
 
     def _ensure_yolo(self):
         if self._yolo is None:

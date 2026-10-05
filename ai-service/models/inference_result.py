@@ -10,6 +10,9 @@ class InferenceResult(BaseModel):
     fatigue: bool
     phone: bool
     smoking: bool = False
+    # Metode penentu seatbelt (mis. yolo_seatbelt, pose_estimation+yolo_checked)
+    # — untuk diagnosis, tidak disimpan ke database.
+    seatbelt_method: str = ""
     eye_closed: float
     yawning: bool
     looking_away: bool

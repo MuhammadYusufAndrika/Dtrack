@@ -91,6 +91,7 @@ class DetectionService:
             result = InferenceResult(
                 vehicle_id=settings.VEHICLE_ID,
                 seatbelt=seatbelt_result.get("seatbelt", False),
+                seatbelt_method=str(seatbelt_result.get("method", "")),
                 fatigue=fatigue_result.get("fatigue", False),
                 phone=phone_result.get("phone", False),
                 smoking=smoking_result.get("smoking", False),
