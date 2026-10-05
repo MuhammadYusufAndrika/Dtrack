@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.fleetvisionai.api.RetrofitClient
+import com.fleetvisionai.models.LoginBody
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -74,7 +75,7 @@ class LoginActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val response = RetrofitClient.apiService.login(
-                    mapOf("email" to email, "password" to password)
+                    LoginBody(email = email, password = password)
                 )
 
                 if (response.success && response.data != null) {

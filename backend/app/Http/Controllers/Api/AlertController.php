@@ -72,4 +72,10 @@ class AlertController extends Controller
             'data' => AlertResource::collection($alerts),
         ]);
     }
+
+    /** Alias agar cocok dengan route PATCH /api/alerts/{alert}/read. */
+    public function markRead($id): JsonResponse
+    {
+        return $this->markAsRead($id);
+    }
 }

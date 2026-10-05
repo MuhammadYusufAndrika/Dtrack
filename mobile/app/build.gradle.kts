@@ -92,6 +92,9 @@ dependencies {
     // NanoHTTPD for MJPEG streaming
     implementation("org.nanohttpd:nanohttpd:2.3.1")
 
+    // Peta offline-friendly tanpa API key (OpenStreetMap)
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
+
     // Coroutine adapter for Retrofit
     implementation("com.jakewharton.retrofit:retrofit2-kotlin-coroutines-adapter:0.9.2")
 }

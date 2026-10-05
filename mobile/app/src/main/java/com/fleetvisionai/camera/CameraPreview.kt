@@ -7,6 +7,7 @@ import android.view.View
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
+import androidx.camera.core.UseCase
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
@@ -52,17 +53,15 @@ class CameraPreview(
     private fun bindCamera() {
         val provider = cameraProvider ?: return
 
-        val preview = Preview.Builder()
-            .build()
-            .also {
-                it.surfaceProvider = previewView.surfaceProvider
-            }
+        val preview: Preview = Preview.Builder().build()
+        val surfaceProvider: Preview.SurfaceProvider = previewView.surfaceProvider
+        preview.setSurfaceProvider(surfaceProvider)
 
         val cameraSelector = CameraSelector.Builder()
             .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
             .build()
 
-        val useCases = mutableListOf(preview)
+        val useCases = mutableListOf<UseCase>(preview)
 
         val streamer = cameraStreamer
         if (streamer != null) {

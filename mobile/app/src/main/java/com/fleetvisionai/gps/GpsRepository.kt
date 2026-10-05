@@ -74,10 +74,9 @@ class GpsRepository(
 
     private suspend fun flushBuffer() {
         val batch = mutableListOf<GpsData>()
-        synchronized(buffer) {
-            while (buffer.isNotEmpty()) {
-                batch.add(buffer.poll())
-            }
+        while (true) {
+            val item: GpsData = synchronized(buffer) { buffer.poll() } ?: break
+            batch.add(item)
         }
         if (batch.isEmpty()) return
 
@@ -101,10 +100,9 @@ class GpsRepository(
 
     private suspend fun retryFailed() {
         val retryBatch = mutableListOf<GpsData>()
-        synchronized(failedQueue) {
-            while (failedQueue.isNotEmpty()) {
-                retryBatch.add(failedQueue.poll())
-            }
+        while (true) {
+            val item: GpsData = synchronized(failedQueue) { failedQueue.poll() } ?: break
+            retryBatch.add(item)
         }
         if (retryBatch.isEmpty()) return
 

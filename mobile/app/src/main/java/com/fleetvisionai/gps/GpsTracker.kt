@@ -16,6 +16,10 @@ class GpsTracker(
 
     var onLocationUpdate: ((GpsUpdate) -> Unit)? = null
 
+    /** Update terakhir (untuk mulai trip berencana tanpa menunggu fix baru). */
+    var lastUpdate: GpsUpdate? = null
+        private set
+
     data class GpsUpdate(
         val latitude: Double,
         val longitude: Double,
@@ -42,6 +46,7 @@ class GpsTracker(
             override fun onLocationResult(locationResult: LocationResult) {
                 val location = locationResult.lastLocation ?: return
                 val update = toGpsUpdate(location)
+                lastUpdate = update
                 onLocationUpdate?.invoke(update)
             }
         }

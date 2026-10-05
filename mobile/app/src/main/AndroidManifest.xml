@@ -42,6 +42,21 @@
             android:exported="false"
             android:theme="@style/Theme.FleetVisionAI" />
 
+        <activity
+            android:name=".TripsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.FleetVisionAI" />
+
+        <activity
+            android:name=".AlertsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.FleetVisionAI" />
+
+        <activity
+            android:name=".ChatActivity"
+            android:exported="false"
+            android:theme="@style/Theme.FleetVisionAI" />
+
         <service
             android:name=".GpsTrackingService"
             android:foregroundServiceType="location"

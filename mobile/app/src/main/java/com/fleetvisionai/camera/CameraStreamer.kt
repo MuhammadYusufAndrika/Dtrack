@@ -15,6 +15,7 @@ import com.fleetvisionai.api.RetrofitClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -39,13 +40,15 @@ class CameraStreamer(
     var onStreamingStatus: ((Boolean) -> Unit)? = null
     var onFrameSent: ((Boolean) -> Unit)? = null
     var onError: ((Exception) -> Unit)? = null
+    /** Hasil AI per frame (Map JSON dari POST /inference), null bila gagal. */
+    var onAiResult: ((Map<String, Any>?) -> Unit)? = null
 
     val imageAnalyzer: ImageAnalysis by lazy {
         ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
             .also { analysis ->
-                analysis.setAnalyzer({ it }, FrameAnalyzer())
+                analysis.setAnalyzer(Dispatchers.IO.asExecutor(), FrameAnalyzer())
             }
     }
 
@@ -93,6 +96,7 @@ class CameraStreamer(
 
             val response = RetrofitClient.aiApiService.sendFrame(imagePart, vehicleIdPart)
             onFrameSent?.invoke(response.isSuccessful)
+            onAiResult?.invoke(if (response.isSuccessful) response.body() else null)
         } catch (e: Exception) {
             Log.e("CameraStreamer", "Failed to send frame", e)
             onError?.invoke(e)
@@ -114,9 +118,9 @@ class CameraStreamer(
 
         private fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap? {
             return try {
-                val buffer: ByteBuffer? = imageProxy.planes[0].buffer
-                val bytes = ByteArray(buffer?.remaining() ?: return null)
-                buffer!!.get(bytes)
+                val buffer: ByteBuffer = imageProxy.planes[0].buffer
+                val bytes = ByteArray(buffer.remaining())
+                buffer.get(bytes)
 
                 val yuvImage = YuvImage(bytes, ImageFormat.NV21,
                     imageProxy.width, imageProxy.height, null)

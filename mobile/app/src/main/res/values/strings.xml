@@ -3,54 +3,94 @@
     <string name="app_name">FleetVision AI</string>
 
     <!-- GPS -->
-    <string name="gps_tracking">GPS Tracking</string>
+    <string name="gps_tracking">Pelacakan GPS</string>
     <string name="gps_status">Status</string>
-    <string name="gps_active">Active</string>
-    <string name="gps_inactive">Inactive</string>
+    <string name="gps_active">Aktif</string>
+    <string name="gps_inactive">Mati</string>
     <string name="latitude">Latitude</string>
     <string name="longitude">Longitude</string>
-    <string name="speed">Speed</string>
-    <string name="accuracy">Accuracy</string>
+    <string name="speed">Kecepatan</string>
+    <string name="accuracy">Akurasi</string>
 
     <!-- Camera -->
-    <string name="camera_streaming">Camera Streaming</string>
+    <string name="camera_streaming">Streaming Kamera</string>
     <string name="camera_status">Status</string>
     <string name="camera_streaming_active">Streaming</string>
-    <string name="camera_streaming_idle">Idle</string>
+    <string name="camera_streaming_idle">Mati</string>
 
     <!-- AI -->
-    <string name="ai_monitoring">AI Behavior Detection</string>
-    <string name="ai_active">Monitoring</string>
-    <string name="ai_idle">Idle</string>
+    <string name="ai_monitoring">Deteksi AI</string>
+    <string name="ai_active">Terhubung</string>
+    <string name="ai_idle">Siaga</string>
 
     <!-- Trip -->
-    <string name="start_trip">Start Trip</string>
-    <string name="end_trip">End Trip</string>
-    <string name="trip_in_progress">Trip In Progress</string>
-    <string name="no_active_trip">No Active Trip</string>
-    <string name="starting_trip">Starting trip…</string>
-    <string name="ending_trip">Ending trip…</string>
-    <string name="trip_duration">Duration</string>
+    <string name="start_trip">Mulai Trip</string>
+    <string name="end_trip">Selesaikan Trip</string>
+    <string name="trip_in_progress">Trip Berjalan</string>
+    <string name="no_active_trip">Tidak Ada Trip Aktif</string>
+    <string name="starting_trip">Memulai trip…</string>
+    <string name="ending_trip">Mengakhiri trip…</string>
+    <string name="trip_duration">Durasi</string>
 
     <!-- Vehicle -->
-    <string name="vehicle_info">Vehicle Info</string>
-    <string name="select_vehicle">Select Vehicle</string>
-    <string name="plate_number">Plate Number</string>
-    <string name="vehicle_id">Vehicle ID</string>
+    <string name="vehicle_info">Info Kendaraan</string>
+    <string name="select_vehicle">Pilih Kendaraan</string>
+    <string name="plate_number">Nomor Plat</string>
+    <string name="vehicle_id">ID Kendaraan</string>
 
     <!-- Connection -->
-    <string name="connection_status">Connection Status</string>
-    <string name="connected">Connected</string>
-    <string name="disconnected">Disconnected</string>
-    <string name="last_sync">Last Sync</string>
+    <string name="connection_status">Status Koneksi</string>
+    <string name="connected">Terhubung</string>
+    <string name="disconnected">Terputus</string>
+    <string name="last_sync">Sinkron Terakhir</string>
 
     <!-- Auth -->
-    <string name="login">Login</string>
+    <string name="login">Masuk</string>
     <string name="email">Email</string>
     <string name="password">Password</string>
 
     <!-- Actions -->
-    <string name="start">Start</string>
-    <string name="stop">Stop</string>
-    <string name="logout">Logout</string>
+    <string name="start">Mulai</string>
+    <string name="stop">Berhenti</string>
+    <string name="logout">Keluar</string>
+    <string name="send">Kirim</string>
+    <string name="delete">Hapus</string>
+    <string name="cancel">Batal</string>
+    <string name="save">Simpan</string>
+
+    <!-- Dashboard -->
+    <string name="hello">Halo</string>
+    <string name="ready_to_go">Siap jalan? Mulai trip untuk mengaktifkan GPS &amp; AI monitoring.</string>
+    <string name="on_trip">Trip sedang berjalan — GPS &amp; kamera AI aktif.</string>
+    <string name="planned_routes">Tugas rute dari admin</string>
+    <string name="start_this_route">Mulai Rute Ini</string>
+    <string name="label_unit">Unit</string>
+    <string name="label_status">Status</string>
+    <string name="label_duration">Durasi</string>
+    <string name="label_distance">Jarak</string>
+    <string name="label_traveled">Ditempuh</string>
+    <string name="label_remaining">Sisa</string>
+    <string name="label_estimate">Estimasi</string>
+    <string name="follow">Mengikuti</string>
+    <string name="free_map">Bebas</string>
+
+    <!-- AI indicators -->
+    <string name="ai_face">Wajah</string>
+    <string name="ai_seatbelt">Seatbelt</string>
+    <string name="ai_eyes_open">Mata Terbuka</string>
+    <string name="ai_no_phone">Tanpa HP</string>
+    <string name="ai_no_smoke">Tanpa Rokok</string>
+    <string name="ai_focus">Fokus Depan</string>
+
+    <!-- Menu -->
+    <string name="menu_dashboard">Dashboard</string>
+    <string name="menu_trips">Trip Saya</string>
+    <string name="menu_alerts">Alert</string>
+    <string name="menu_chat">Chat Admin</string>
+
+    <!-- Chat -->
+    <string name="chat_hint">Tulis laporan / pertanyaan…</string>
+    <string name="chat_empty">Belum ada pesan. Contoh: ban bocor di KM 45, kendaraan mogok, tanya jadwal.</string>
+    <string name="chat_clear_confirm">Hapus seluruh riwayat chat ini? Tindakan tidak bisa dibatalkan.</string>
+    <string name="chat_delete_confirm">Hapus pesan ini?</string>
 </resources>
