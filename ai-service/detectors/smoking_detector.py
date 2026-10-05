@@ -66,7 +66,8 @@ class SmokingDetector(BaseDetector):
             return {"smoking": None, "confidence": 0.0,
                     "smoke_bbox": None, "detections_raw": []}
         try:
-            results = self._model(frame, verbose=False)
+            # imgsz 480: model 60MB ~2x lebih cepat dari 640, asap tetap kedetek.
+            results = self._model(frame, verbose=False, imgsz=480)
             smoke_detections = []
             for result in results:
                 boxes = result.boxes

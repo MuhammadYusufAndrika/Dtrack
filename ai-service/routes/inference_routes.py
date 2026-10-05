@@ -26,6 +26,12 @@ start_time = datetime.utcnow()
 _frame_store: Dict[str, dict] = {}
 _frame_lock = threading.Lock()
 
+# Inference (YOLO + MediaPipe) bersifat CPU-bound dan TIDAK thread-safe
+# (MediaPipe). Lock ini memastikan: (1) hanya 1 inference jalan dalam satu
+# waktu, (2) inference dilempar ke thread terpisah agar event loop tetap
+# responsif menerima frame + melayani polling admin (anti-freeze preview).
+_inference_lock = asyncio.Lock()
+
 
 def set_services(ds, ss=None):
     """Dependency injection: set service instances from the main app."""
@@ -111,7 +117,8 @@ async def run_inference(file: UploadFile = File(...), vehicle_id: str = "") -> J
         if vehicle_id:
             _store_frame_fast(vehicle_id, frame)
 
-        result = detection_service.process_frame(frame)
+        async with _inference_lock:
+            result = await asyncio.to_thread(detection_service.process_frame, frame)
 
         if vehicle_id:
             _update_result(vehicle_id, result)
@@ -197,7 +204,11 @@ async def inference_websocket(websocket: WebSocket):
                 # Simpan cepat dulu, baru inference — admin dapat 2-5 FPS bukan 0.5 FPS
                 _store_frame_fast(vehicle_id, frame)
 
-                result = detection_service.process_frame(frame)
+                # Inference berat (3x YOLO + 3x MediaPipe) jalan di thread
+                # terpisah + antre 1 per 1, supaya frame baru & polling admin
+                # tidak ikut macet (inilah yang bikin preview nge-freeze).
+                async with _inference_lock:
+                    result = await asyncio.to_thread(detection_service.process_frame, frame)
 
                 _update_result(vehicle_id, result)
 

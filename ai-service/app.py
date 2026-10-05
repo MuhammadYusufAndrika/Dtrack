@@ -12,7 +12,7 @@ from detectors import create_detectors
 from services.detection_service import DetectionService
 from services.stream_service import StreamService
 from services.communication_service import CommunicationService
-from routes.inference_routes import router as inference_router, set_services, _store_frame
+from routes.inference_routes import router as inference_router, set_services, _store_frame, _store_frame_fast, _inference_lock
 from routes.vehicle_routes import router as vehicle_router
 from utils.logger import setup_logger
 
@@ -165,8 +165,12 @@ async def continuous_inference_loop():
                 await asyncio.sleep(1.0)
                 continue
 
-            # Run detection pipeline
-            result = detection_service.process_frame(frame)
+            # Simpan duluan biar polling admin tetap live, inference menyusul.
+            _store_frame_fast(settings.VEHICLE_ID, frame)
+
+            # Run detection pipeline di thread terpisah (anti-freeze loop).
+            async with _inference_lock:
+                result = await asyncio.to_thread(detection_service.process_frame, frame)
 
             # Store frame for admin live view
             _store_frame(settings.VEHICLE_ID, frame, result)
