@@ -26,7 +26,8 @@ import java.nio.ByteBuffer
 
 class CameraStreamer(
     private val context: Context,
-    private val vehicleId: String,
+    // Kode string unit ("TRK001") — kunci frame AI service + lookup admin. BUKAN id integer.
+    var vehicleId: String,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
     private var streamingJob: Job? = null

@@ -79,6 +79,7 @@ export default function DriverDashboard() {
 
     const watchId = useRef(null);
     const lastPos = useRef(null);
+    const gpsPosRef = useRef(null); // posisi terbaru utk interval kirim (stabil, tidak reset timer)
     const locInterval = useRef(null);
     const timerInterval = useRef(null);
     const videoRef = useRef(null);
@@ -87,6 +88,33 @@ export default function DriverDashboard() {
     const aiFrameInterval = useRef(null);
     const streamRef = useRef(null);
     const vehicleIdRef = useRef('unknown');
+    const wakeLockRef = useRef(null);
+
+    const LOC_QUEUE_KEY = 'fleetvision-loc-queue';
+    const readLocQueue = () => {
+        try {
+            const q = JSON.parse(localStorage.getItem(LOC_QUEUE_KEY) || '[]');
+            return Array.isArray(q) ? q : [];
+        } catch { return []; }
+    };
+    const writeLocQueue = (q) => {
+        try { localStorage.setItem(LOC_QUEUE_KEY, JSON.stringify(q.slice(-500))); } catch {}
+    };
+
+    const requestWakeLock = useCallback(async () => {
+        // Tahan layar menyala selama trip: timer browser tidak di-throttle
+        // saat layar mati, yang dulu bikin titik GPS bolong-bolong.
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLockRef.current = await navigator.wakeLock.request('screen');
+            }
+        } catch {}
+    }, []);
+
+    const releaseWakeLock = useCallback(() => {
+        try { wakeLockRef.current?.release(); } catch {}
+        wakeLockRef.current = null;
+    }, []);
 
     useEffect(() => {
         (async () => {
@@ -117,6 +145,7 @@ export default function DriverDashboard() {
                         setTripState('tracking');
                         startGpsTracking();
                         startCamera();
+                        requestWakeLock();
                     }
                 }
             } catch {}
@@ -139,25 +168,42 @@ export default function DriverDashboard() {
     }, [driver?.vehicle?.vehicle_id]);
 
     useEffect(() => {
-        if (tripState === 'tracking' && driver?.vehicle && gpsPos) {
+        if (tripState === 'tracking' && driver?.vehicle) {
+            const vehicleId = driver.vehicle.id;
             locInterval.current = setInterval(async () => {
-                try {
-                    await fetch('/api/location', {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-                        body: JSON.stringify({ vehicle_id: driver.vehicle.id, latitude: gpsPos.lat, longitude: gpsPos.lng, speed: Math.round(gpsPos.speed * 3.6), heading: Math.round(gpsPos.heading), accuracy: Math.round(gpsPos.accuracy) }),
-                    });
-                } catch {}
+                const cur = gpsPosRef.current;
+                if (!cur) return;
+                const headers = { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json', Accept: 'application/json' };
+                const sendOne = async (p) => {
+                    const r = await fetch('/api/location', { method: 'POST', headers, body: JSON.stringify(p) });
+                    if (!r.ok) throw new Error('send failed');
+                };
+                // Antrean offline: tiap tick kirim titik terbaru + tunggakan lama berurutan.
+                const queue = [...readLocQueue(), {
+                    vehicle_id: vehicleId,
+                    latitude: cur.lat, longitude: cur.lng,
+                    speed: Math.round(cur.speed * 3.6), heading: Math.round(cur.heading),
+                    accuracy: Math.round(cur.accuracy),
+                }];
+                const remaining = [];
+                let failed = false;
+                for (const p of queue) {
+                    if (failed) { remaining.push(p); continue; }
+                    try { await sendOne(p); }
+                    catch { failed = true; remaining.push(p); }
+                }
+                writeLocQueue(remaining);
             }, 5000);
         }
         return () => { if (locInterval.current) clearInterval(locInterval.current); };
-    }, [tripState, gpsPos, driver?.vehicle]);
+    }, [tripState, driver?.vehicle]);
 
     const startGpsTracking = useCallback(() => {
         watchId.current = navigator.geolocation.watchPosition(
             (p) => {
                 const newPos = { lat: p.coords.latitude, lng: p.coords.longitude, speed: p.coords.speed ?? 0, heading: p.coords.heading ?? 0, accuracy: p.coords.accuracy ?? 0 };
                 setGpsPos(newPos);
+                gpsPosRef.current = newPos;
                 if (lastPos.current) setDistance((prev) => prev + haversine(lastPos.current.lat, lastPos.current.lng, newPos.lat, newPos.lng));
                 lastPos.current = { lat: newPos.lat, lng: newPos.lng };
             },
@@ -322,6 +368,7 @@ export default function DriverDashboard() {
             setTripState('tracking');
             setGpsError('');
             startCamera();
+            requestWakeLock();
         } catch (err) {
             setGpsError(err.message || 'Failed to start trip');
             setTripState('idle');
@@ -356,6 +403,7 @@ export default function DriverDashboard() {
             setTripState('tracking');
             setGpsError('');
             startCamera();
+            requestWakeLock();
         } catch (err) {
             setGpsError(err.message || 'Failed to start trip');
             setTripState('idle');
@@ -397,6 +445,8 @@ export default function DriverDashboard() {
             setTripState('idle');
             setActiveTrip(null);
             setGpsPos(null);
+            gpsPosRef.current = null;
+            releaseWakeLock();
             setDistance(0);
             setElapsed(0);
             lastPos.current = null;
@@ -404,7 +454,15 @@ export default function DriverDashboard() {
             setGpsError(err.message || 'Failed to end trip');
             setTripState('tracking');
         }
-    }, [activeTrip, gpsPos, distance, stopGpsTracking, stopCamera]);
+    }, [activeTrip, gpsPos, distance, stopGpsTracking, stopCamera, releaseWakeLock]);
+
+    // Wake lock bisa lepas saat tab disembunyikan — minta lagi saat kembali.
+    useEffect(() => {
+        if (tripState !== 'tracking') return;
+        const onVis = () => { if (!document.hidden) requestWakeLock(); };
+        document.addEventListener('visibilitychange', onVis);
+        return () => document.removeEventListener('visibilitychange', onVis);
+    }, [tripState, requestWakeLock]);
 
     useEffect(() => {
         return () => {
@@ -412,6 +470,7 @@ export default function DriverDashboard() {
             if (locInterval.current) clearInterval(locInterval.current);
             if (timerInterval.current) clearInterval(timerInterval.current);
             stopCamera();
+            releaseWakeLock();
         };
     }, []);
 

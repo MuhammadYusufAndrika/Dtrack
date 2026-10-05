@@ -3,7 +3,7 @@ import { MapContainer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import MapTiles from './MapTiles';
 import StatusBadge from './StatusBadge';
 import L from 'leaflet';
-import { haversineKm, fetchRoadRoute, straightLine, formatKm } from '../utils/route';
+import { haversineKm, fetchRoadRoute, straightLine, formatKm, matchRoadTrail } from '../utils/route';
 import { Route, Gauge, Clock, Flag, Navigation } from 'lucide-react';
 
 const originIcon = L.divIcon({ className: '', html: '<div style="width:32px;height:32px;background:linear-gradient(135deg,#22c55e,#06b6d4);border:3px solid #fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;">📍</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
@@ -38,6 +38,7 @@ export default function TripDetail({ tripId, fetchFn }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [planCoords, setPlanCoords] = useState([]);
+    const [snappedTrail, setSnappedTrail] = useState(null);
 
     const doFetch = fetchFn || ((url, opts) => fetch(url, opts));
 
@@ -73,20 +74,36 @@ export default function TripDetail({ tripId, fetchFn }) {
         return () => { cancelled = true; };
     }, [data?.trip?.id]);
 
+    // Tempelkan jejak ke jalan agar mengikuti rute asli, bukan garis lurus.
+    // (Di atas early-return agar urutan hooks stabil.)
+    const rawTrail = (data?.path || [])
+        .map((p) => [Number(p.latitude), Number(p.longitude)])
+        .filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b));
+    useEffect(() => {
+        setSnappedTrail(null);
+        if (rawTrail.length < 2) return;
+        let cancelled = false;
+        matchRoadTrail(rawTrail).then((r) => {
+            if (!cancelled && r) setSnappedTrail(r);
+        });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data?.trip?.id, data?.path?.length]);
+
     if (loading) return <div className="flex items-center justify-center py-16"><div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>;
     if (error) return <div className="p-4 rounded-xl bg-danger-500/10 border border-danger-500/30 text-sm text-danger-500">⚠️ {error}</div>;
     if (!data) return null;
 
     const { trip: t, session, path = [], path_source, path_truncated } = data;
     const traveled = Number(t.total_distance_km) > 0 ? Number(t.total_distance_km) : Number(session?.total_distance_km || 0);
-    const trail = path
-        .map((p) => [Number(p.latitude), Number(p.longitude)])
-        .filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b));
+    const trail = rawTrail;
+
+    const displayTrail = snappedTrail && snappedTrail.length > 1 ? snappedTrail : trail;
     const lastPos = trail.length ? trail[trail.length - 1] : null;
     const sisa = lastPos && t.dest_latitude && t.dest_longitude
         ? haversineKm(lastPos[0], lastPos[1], Number(t.dest_latitude), Number(t.dest_longitude))
         : null;
-    const fitPoints = [...trail, ...planCoords];
+    const fitPoints = [...displayTrail, ...planCoords];
     if (!fitPoints.length && t.start_latitude && t.start_longitude) fitPoints.push([Number(t.start_latitude), Number(t.start_longitude)]);
 
     const stats = [
@@ -124,7 +141,7 @@ export default function TripDetail({ tripId, fetchFn }) {
                         <MapTiles />
                         <FitBounds points={fitPoints} />
                         {planCoords.length > 1 && <Polyline positions={planCoords} pathOptions={{ color: '#2563eb', weight: 4, opacity: 0.7, dashArray: '10 8' }} />}
-                        {trail.length > 1 && <Polyline positions={trail} pathOptions={{ color: '#22c55e', weight: 4, opacity: 0.9 }} />}
+                        {displayTrail.length > 1 && <Polyline positions={displayTrail} pathOptions={{ color: '#22c55e', weight: 4, opacity: 0.9 }} />}
                         {t.start_latitude && t.start_longitude && (
                             <Marker position={[Number(t.start_latitude), Number(t.start_longitude)]} icon={originIcon}>
                                 <Popup><div className="text-sm"><p className="font-bold">📍 {t.origin || 'Titik awal'}</p></div></Popup>
@@ -145,7 +162,7 @@ export default function TripDetail({ tripId, fetchFn }) {
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-dark-500">
                 <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-primary-600 inline-block" style={{ borderTop: '2px dashed #2563eb' }} /> Rute rencana</span>
-                <span className="flex items-center gap-1.5"><span className="w-4 h-1 rounded bg-success-500 inline-block" /> Jejak aktual ({trail.length} titik{path_truncated ? ', dipotong 2000' : ''})</span>
+                <span className="flex items-center gap-1.5"><span className="w-4 h-1 rounded bg-success-500 inline-block" /> Jejak aktual ({trail.length} titik{snappedTrail ? ', mengikuti jalan' : ''}{path_truncated ? ', dipotong 2000' : ''})</span>
                 {t.status === 'PLANNED' && <span>Belum jalan — belum ada jejak GPS.</span>}
                 {path_source === 'timerange' && <span>Jejak diambil dari rentang waktu (sesi tak tertaut).</span>}
                 {trail.length === 0 && t.status !== 'PLANNED' && <span className="font-semibold text-warning-500">Belum ada titik GPS untuk trip ini — pastikan trip sudah dimulai dan GPS kendaraan terkirim.</span>}

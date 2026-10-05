@@ -14,8 +14,9 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/api/\"")
-        buildConfigField("String", "INFERENCE_URL", "\"http://10.0.2.2:5000/\"")
+        // Production: https://dtrack.yusufandrika.dev (wajib diakhiri garis miring)
+        buildConfigField("String", "API_BASE_URL", "\"https://dtrack.yusufandrika.dev/api/\"")
+        buildConfigField("String", "INFERENCE_URL", "\"https://dtrack.yusufandrika.dev/ai/\"")
     }
 
     buildTypes {

@@ -64,3 +64,43 @@ export function straightLine(origin, dest) {
         [Number(dest.lat), Number(dest.lng)],
     ];
 }
+
+/**
+ * Tempelkan jejak GPS ke jalan terdekat (OSRM map matching, gratis).
+ * Untuk jejak bolong (titik jarang), hasilnya mengikuti jalan raya
+ * alih-alih garis lurus. Return null bila gagal -> pakai titik mentah.
+ */
+export async function matchRoadTrail(points, timeoutMs = 8000) {
+    try {
+        if (!Array.isArray(points) || points.length < 2) return null;
+        let pts = points;
+        if (pts.length > 100) {
+            const step = Math.ceil(pts.length / 100);
+            pts = pts.filter((_, i) => i % step === 0);
+            const last = points[points.length - 1];
+            if (pts[pts.length - 1] !== last) pts.push(last);
+        }
+        const coords = pts.map(([lat, lng]) => `${lng},${lat}`).join(';');
+        const radiuses = pts.map(() => 50).join(';');
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), timeoutMs);
+        const res = await fetch(
+            `https://router.project-osrm.org/match/v1/driving/${coords}?overview=full&geometries=geojson&radiuses=${radiuses}&tidy=true`,
+            { signal: ctrl.signal }
+        );
+        clearTimeout(t);
+        if (!res.ok) return null;
+        const json = await res.json();
+        if (json?.code !== 'Ok' || !json.matchings?.length) return null;
+        const all = [];
+        for (const m of json.matchings) {
+            const c = m.geometry?.coordinates || [];
+            c.forEach(([lng, lat], i) => {
+                if (i > 0 || !all.length) all.push([lat, lng]);
+            });
+        }
+        return all.length > 1 ? all : null;
+    } catch {
+        return null;
+    }
+}

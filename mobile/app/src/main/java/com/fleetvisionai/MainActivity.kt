@@ -3,8 +3,10 @@ package com.fleetvisionai
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -50,10 +52,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cardTrip: MaterialCardView
 
     private var vehicleList = listOf<VehicleInfo>()
-    private var selectedVehicleId: String = "unknown"
+    private var selectedVehicleId: String = "unknown" // kode string "TRK001" utk kamera/AI
+    private var selectedVehicleDbId: Int? = null // id integer DB utk GPS/trip
     private var driverInfo: DriverInfo? = null
     private var currentTripId: Int? = null
     private var isTripActive = false
+
+    private val backgroundPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ -> }
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -100,7 +107,7 @@ class MainActivity : AppCompatActivity() {
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         gpsTracker = GpsTracker(fusedLocationClient)
-        gpsRepository = GpsRepository(selectedVehicleId, lifecycleScope)
+        gpsRepository = GpsRepository(selectedVehicleDbId ?: 0, lifecycleScope)
         cameraStreamer = CameraStreamer(this, selectedVehicleId, lifecycleScope)
         cameraPreview = CameraPreview(previewView, this).apply {
             cameraStreamer = this@MainActivity.cameraStreamer
@@ -139,7 +146,7 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 tvCameraStatus.text = if (active) getString(R.string.camera_streaming_active) else getString(R.string.camera_streaming_idle)
                 tvCameraStatus.setTextColor(getColor(if (active) R.color.status_active else R.color.status_inactive))
-                tvAiStatus.text = if (active) getString(R.string.ai_active) else getString(R.id.ai_idle)
+                tvAiStatus.text = if (active) getString(R.string.ai_active) else getString(R.string.ai_idle)
                 tvAiStatus.setTextColor(getColor(if (active) R.color.status_active else R.color.status_inactive))
                 indicatorAi.setBackgroundResource(
                     if (active) R.drawable.circle_indicator_connected
@@ -201,6 +208,35 @@ class MainActivity : AppCompatActivity() {
 
     private fun onPermissionsGranted() {
         loadDriverAndVehicles()
+        ensureBackgroundLocation()
+    }
+
+    /**
+     * Layar mati = GPS ikut mati kecuali izin "sepanjang waktu" diberikan.
+     * Android 10: minta langsung. Android 11+: wajib lewat halaman Settings.
+     */
+    private fun ensureBackgroundLocation() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+        ) return
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+            backgroundPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        } else {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Izin lokasi sepanjang waktu")
+                .setMessage("Agar GPS tetap jalan saat layar mati, pilih 'Allow all the time' di halaman berikutnya.")
+                .setPositiveButton("Buka Pengaturan") { _, _ ->
+                    startActivity(
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:$packageName")
+                        )
+                    )
+                }
+                .setNegativeButton("Nanti", null)
+                .show()
+        }
     }
 
     private fun restoreSession() {
@@ -216,7 +252,16 @@ class MainActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 try {
                     val response = RetrofitClient.apiService.getTrip(savedTripId)
-                    if (response.success && response.data != null && response.data.status == "IN_PROGRESS") {
+                    // Backend: data = { trip, session, path, ... }
+                    val trip = response.data?.trip
+                    if (response.success && trip != null && trip.status == "IN_PROGRESS") {
+                        selectedVehicleDbId = trip.vehicleId
+                        selectedVehicleId = vehicleList.find { it.id == trip.vehicleId }?.vehicleId
+                            ?: app.getActiveVehicleId() ?: "unknown"
+                        gpsRepository.vehicleDbId = trip.vehicleId
+                        cameraStreamer.vehicleId = selectedVehicleId
+                        tvPlateNumber.text = vehicleList.find { it.id == trip.vehicleId }?.plateNumber
+                            ?: selectedVehicleId
                         startGpsTracking()
                         startCameraStreaming()
                     } else {
@@ -233,19 +278,27 @@ class MainActivity : AppCompatActivity() {
     private fun loadDriverAndVehicles() {
         lifecycleScope.launch {
             try {
-                val vehiclesResponse = RetrofitClient.apiService.getVehicles()
-                if (vehiclesResponse.success && vehiclesResponse.data != null) {
-                    vehicleList = vehiclesResponse.data
-                    if (vehicleList.isNotEmpty() && selectedVehicleId == "unknown") {
-                        selectedVehicleId = vehicleList.first().vehicleId
-                        tvPlateNumber.text = vehicleList.first().plateNumber
-                    }
-                }
-
                 val driversResponse = RetrofitClient.apiService.getDrivers()
                 if (driversResponse.success && driversResponse.data != null) {
                     val email = FleetVisionApp.instance.getUserEmail()
                     driverInfo = driversResponse.data.find { it.email == email }
+                }
+
+                val vehiclesResponse = RetrofitClient.apiService.getVehicles()
+                if (vehiclesResponse.success && vehiclesResponse.data != null) {
+                    vehicleList = vehiclesResponse.data
+                    if (vehicleList.isNotEmpty() && selectedVehicleId == "unknown") {
+                        // Utamakan unit assign-an admin; fallback ke unit pertama.
+                        val assigned = driverInfo?.vehicleId?.let { aid ->
+                            vehicleList.find { it.id == aid }
+                        }
+                        val pick = assigned ?: vehicleList.first()
+                        selectedVehicleId = pick.vehicleId
+                        selectedVehicleDbId = pick.id
+                        gpsRepository.vehicleDbId = pick.id
+                        cameraStreamer.vehicleId = pick.vehicleId
+                        tvPlateNumber.text = pick.plateNumber
+                    }
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Failed to load data", Toast.LENGTH_SHORT).show()
@@ -271,6 +324,10 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Invalid vehicle selected", Toast.LENGTH_SHORT).show()
             return
         }
+
+        selectedVehicleDbId = vehicleIdInt
+        gpsRepository.vehicleDbId = vehicleIdInt
+        cameraStreamer.vehicleId = selectedVehicleId
 
         setTripLoading(true)
 
@@ -387,8 +444,9 @@ class MainActivity : AppCompatActivity() {
             gpsRepository.startAutoFlush()
 
             val serviceIntent = Intent(this, GpsTrackingService::class.java).apply {
-                putExtra(GpsTrackingService.EXTRA_VEHICLE_ID, selectedVehicleId)
-                putExtra(GpsTrackingService.EXTRA_TIMEOUT_MINUTES, 120L)
+                putExtra(GpsTrackingService.EXTRA_VEHICLE_ID, selectedVehicleDbId ?: 0)
+                // Batas pengaman 8 jam (trip logistik bisa lama; 0 = tanpa batas bila diubah).
+                putExtra(GpsTrackingService.EXTRA_TIMEOUT_MINUTES, 480L)
             }
             ContextCompat.startForegroundService(this, serviceIntent)
 
@@ -492,10 +550,11 @@ class MainActivity : AppCompatActivity() {
             .setItems(items) { _, which ->
                 val vehicle = vehicleList[which]
                 selectedVehicleId = vehicle.vehicleId
+                selectedVehicleDbId = vehicle.id
                 tvPlateNumber.text = vehicle.plateNumber
 
-                gpsRepository = GpsRepository(selectedVehicleId, lifecycleScope)
-                cameraStreamer = CameraStreamer(this, selectedVehicleId, lifecycleScope)
+                gpsRepository.vehicleDbId = vehicle.id
+                cameraStreamer.vehicleId = vehicle.vehicleId
                 cameraPreview.cameraStreamer = cameraStreamer
 
                 Toast.makeText(this, "Selected: ${vehicle.plateNumber}", Toast.LENGTH_SHORT).show()

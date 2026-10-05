@@ -3,8 +3,9 @@ package com.fleetvisionai.models
 import com.google.gson.annotations.SerializedName
 
 data class GpsData(
+    // WAJIB id integer DB (vehicles.id), bukan kode "TRK001" — backend menolak string (422).
     @SerializedName("vehicle_id")
-    val vehicleId: String,
+    val vehicleId: Int,
 
     val latitude: Double,
 

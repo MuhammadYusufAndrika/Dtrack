@@ -1,8 +1,10 @@
 package com.fleetvisionai.api
 
 import com.fleetvisionai.models.ApiResponse
+import com.fleetvisionai.models.AuthData
 import com.fleetvisionai.models.DriverInfo
 import com.fleetvisionai.models.GpsData
+import com.fleetvisionai.models.TripDetailResponse
 import com.fleetvisionai.models.TripInfo
 import com.fleetvisionai.models.VehicleInfo
 import retrofit2.http.Body
@@ -20,7 +22,7 @@ interface ApiService {
     suspend fun sendLocationBatch(@Body locations: List<GpsData>): ApiResponse<Any>
 
     @POST("api/auth/login")
-    suspend fun login(@Body credentials: Map<String, String>): ApiResponse<Map<String, String>>
+    suspend fun login(@Body credentials: Map<String, String>): ApiResponse<AuthData>
 
     @GET("api/auth/me")
     suspend fun getMe(): ApiResponse<Map<String, Any>>
@@ -41,6 +43,6 @@ interface ApiService {
     suspend fun updateTrip(@Path("id") id: Int, @Body body: Map<String, Any>): ApiResponse<TripInfo>
 
     @GET("api/trips/{id}")
-    suspend fun getTrip(@Path("id") id: Int): ApiResponse<TripInfo>
+    suspend fun getTrip(@Path("id") id: Int): ApiResponse<TripDetailResponse>
 
 }

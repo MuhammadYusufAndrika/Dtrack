@@ -12,7 +12,8 @@ import java.util.LinkedList
 import java.util.Queue
 
 class GpsRepository(
-    private val vehicleId: String,
+    // ID integer DB (vehicles.id). Diubah saat ganti kendaraan.
+    var vehicleDbId: Int,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
     private val buffer: Queue<GpsData> = LinkedList()
@@ -44,7 +45,7 @@ class GpsRepository(
 
     fun queueLocation(update: GpsTracker.GpsUpdate) {
         val gpsData = GpsData(
-            vehicleId = vehicleId,
+            vehicleId = vehicleDbId,
             latitude = update.latitude,
             longitude = update.longitude,
             speed = update.speedKmh,

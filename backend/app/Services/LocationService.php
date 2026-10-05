@@ -99,14 +99,20 @@ class LocationService
             ]);
         }
 
-        broadcast(new LocationUpdated(
-            $vehicleId,
-            $data['latitude'],
-            $data['longitude'],
-            $data['speed'] ?? 0,
-            $data['heading'] ?? 0,
-            $timestamp->toDateTimeString(),
-        ))->toOthers();
+        // Broadcast jangan menggagalkan simpan GPS: bila Reverb mati / salah alamat,
+        // lokasi tetap tersimpan dan polling yang ambil alih.
+        try {
+            broadcast(new LocationUpdated(
+                $vehicleId,
+                $data['latitude'],
+                $data['longitude'],
+                $data['speed'] ?? 0,
+                $data['heading'] ?? 0,
+                $timestamp->toDateTimeString(),
+            ))->toOthers();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Location broadcast gagal: '.$e->getMessage());
+        }
 
         return $location;
     }

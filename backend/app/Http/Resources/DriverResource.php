@@ -17,6 +17,8 @@ class DriverResource extends JsonResource
             'license_number' => $this->license_number,
             'status' => $this->status,
             'photo_url' => $this->photo_url,
+            // ID DB kendaraan assign-an admin (untuk aplikasi Android).
+            'vehicle_id' => $this->whenLoaded('vehicle', fn() => $this->vehicle?->id),
             'vehicle' => $this->whenLoaded('vehicle', function () {
                 return $this->vehicle ? [
                     'id' => $this->vehicle->id,

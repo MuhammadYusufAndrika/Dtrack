@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('alerts', AlertController::class)->only(['index', 'show']);
 
     Route::post('/location', [LocationController::class, 'store']);
+    Route::post('/location/batch', [LocationController::class, 'batch']);
 
     Route::get('/vehicles/{vehicle}/locations', [VehicleController::class, 'getLocations']);
     Route::get('/drivers/{driver}/status', [DriverController::class, 'getStatus']);

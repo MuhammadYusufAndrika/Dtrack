@@ -27,7 +27,7 @@ class GpsTrackingService : Service() {
     private lateinit var gpsTracker: GpsTracker
     private lateinit var gpsRepository: GpsRepository
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var vehicleId: String = "unknown"
+    private var vehicleDbId: Int = 0
     private var timeoutMinutes: Long = 30
 
     override fun onCreate() {
@@ -37,14 +37,14 @@ class GpsTrackingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        vehicleId = intent?.getStringExtra(EXTRA_VEHICLE_ID) ?: "unknown"
+        vehicleDbId = intent?.getIntExtra(EXTRA_VEHICLE_ID, 0) ?: 0
         timeoutMinutes = intent?.getLongExtra(EXTRA_TIMEOUT_MINUTES, 30) ?: 30
 
         val notification = NotificationHelper.buildGpsNotification(this)
         startForeground(NotificationHelper.NOTIFICATION_ID_GPS, notification)
 
         gpsTracker = GpsTracker(fusedLocationClient)
-        gpsRepository = GpsRepository(vehicleId, serviceScope)
+        gpsRepository = GpsRepository(vehicleDbId, serviceScope)
 
         gpsRepository.onSendError = { error ->
             Log.e(TAG, "Location send error", error)
@@ -57,7 +57,7 @@ class GpsTrackingService : Service() {
         try {
             gpsTracker.startTracking()
             gpsRepository.startAutoFlush()
-            Log.i(TAG, "GPS tracking started for vehicle: $vehicleId")
+            Log.i(TAG, "GPS tracking started for vehicle db id: $vehicleDbId")
         } catch (e: SecurityException) {
             Log.e(TAG, "Location permission missing", e)
             stopSelf()

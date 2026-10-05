@@ -78,7 +78,7 @@ class LoginActivity : AppCompatActivity() {
                 )
 
                 if (response.success && response.data != null) {
-                    val token = response.data["token"]
+                    val token = response.data.token
                     if (!token.isNullOrEmpty()) {
                         RetrofitClient.setAuthToken(token)
 

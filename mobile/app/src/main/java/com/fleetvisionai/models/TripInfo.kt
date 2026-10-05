@@ -32,5 +32,20 @@ data class TripInfo(
     val endLongitude: Double?,
 
     @SerializedName("total_distance_km")
-    val totalDistanceKm: Double?
+    val totalDistanceKm: Double?,
+
+    val origin: String?,
+
+    val destination: String?,
+
+    @SerializedName("planned_distance_km")
+    val plannedDistanceKm: Double?,
+
+    @SerializedName("distance_km")
+    val distanceKm: Double?
+)
+
+// Samakan backend: GET /api/trips/{id} -> data: { trip, session, path, ... }
+data class TripDetailResponse(
+    val trip: TripInfo?
 )
