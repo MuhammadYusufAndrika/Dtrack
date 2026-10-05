@@ -55,7 +55,7 @@ export default function Register() {
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 via-violet-500 to-accent-500 flex items-center justify-center shadow-[0_10px_32px_rgba(59,130,246,0.45)]">
                         <Truck className="w-6 h-6 text-white" />
                     </div>
-                    <p className="font-display font-bold text-dark-900 mt-2.5 leading-tight">FleetVision AI</p>
+                    <p className="font-display font-bold text-dark-900 mt-2.5 leading-tight">Dtrack</p>
                     <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-dark-400">Pendaftaran Sopir</p>
                 </div>
 

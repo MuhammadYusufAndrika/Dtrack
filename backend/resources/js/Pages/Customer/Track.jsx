@@ -190,7 +190,7 @@ export default function Track() {
                             <Truck className="w-5 h-5 text-white" />
                         </div>
                         <div className="text-left hidden sm:block">
-                            <h1 className="font-display text-sm font-bold text-dark-900 leading-tight">FleetVision</h1>
+                            <h1 className="font-display text-sm font-bold text-dark-900 leading-tight">Dtrack</h1>
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gradient">Live Tracking</p>
                         </div>
                     </button>

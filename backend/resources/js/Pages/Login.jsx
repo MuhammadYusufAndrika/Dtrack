@@ -72,8 +72,8 @@ export default function Login() {
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 via-violet-500 to-accent-500 flex items-center justify-center shadow-[0_10px_32px_rgba(59,130,246,0.45)]">
                         <Truck className="w-6 h-6 text-white" />
                     </div>
-                    <p className="font-display font-bold text-dark-900 mt-2.5 leading-tight">FleetVision AI</p>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-dark-400">Fleet Tracking</p>
+                    <p className="font-display font-bold text-dark-900 mt-2.5 leading-tight">Dahana AI</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-dark-400">Live Tracking</p>
                 </div>
 
                 <div className="glass-strong rounded-3xl p-6 sm:p-8">
@@ -82,7 +82,7 @@ export default function Login() {
                             <Sparkles className="w-3 h-3" /> Selamat datang kembali
                         </span>
                         <h1 className="font-display text-2xl sm:text-[26px] font-bold text-dark-900 mt-3 leading-tight">
-                            Masuk ke <span className="text-gradient">FleetVision</span>
+                            Masuk ke <span className="text-gradient">Dtrack</span>
                         </h1>
                         <p className="text-sm text-dark-400 mt-1.5">Kelola armada & pantau driver secara real-time.</p>
                     </div>
