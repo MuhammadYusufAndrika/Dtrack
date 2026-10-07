@@ -11,11 +11,12 @@ export default function GuestLayout({ children }) {
             </div>
 
             <div className="relative w-full max-w-5xl mx-auto grid md:grid-cols-2 glass-strong rounded-3xl overflow-hidden animate-fade-up">
-                <div className="hidden md:flex flex-col justify-between p-8 relative overflow-hidden bg-gradient-to-br from-primary-600 via-violet-500 to-accent-500">
+                <div className="hidden md:flex flex-col justify-between p-8 relative overflow-hidden bg-gradient-to-br from-primary-600 via-violet-600 to-accent-500">
                     <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/20 blur-3xl" />
-                    <div className="absolute -bottom-24 -left-16 w-72 h-72 rounded-full bg-white/10 blur-3xl" />
+                    <div className="absolute -bottom-24 -left-16 w-72 h-72 rounded-full bg-rose-400/25 blur-3xl" />
+                    <div className="absolute bottom-10 right-0 w-40 h-40 rounded-full bg-amber-300/25 blur-3xl" />
                     <div className="relative flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary-500 via-violet-500 to-accent-500 flex items-center justify-center shadow-[0_10px_32px_rgba(59,130,246,0.5)]">
+                        <div className="w-11 h-11 rounded-2xl bg-white/20 border border-white/30 backdrop-blur-md flex items-center justify-center shadow-[0_10px_32px_rgba(15,23,42,0.25)]">
                             <Truck className="w-6 h-6 text-white" />
                         </div>
                         <div>
@@ -25,16 +26,16 @@ export default function GuestLayout({ children }) {
                     </div>
                     <div className="relative">
                         <h2 className="font-display text-3xl font-bold leading-tight text-white">
-                            Pantau armada<br /><span className="underline decoration-white/60 underline-offset-4">real-time,</span><br />tanpa cemas.
+                            Pantau armada<br /><span className="underline decoration-amber-300 underline-offset-4">real-time,</span><br />tanpa cemas.
                         </h2>
                         <div className="mt-6 space-y-3">
                             {[
-                                { icon: Radar, text: 'Live GPS setiap 5 detik + peta interaktif' },
-                                { icon: ShieldCheck, text: 'AI monitoring: seatbelt, fatigue, phone' },
-                                { icon: Navigation, text: 'Trip & alert otomatis untuk admin' },
-                            ].map(({ icon: Icon, text }) => (
+                                { icon: Radar, text: 'Live GPS setiap 5 detik + peta interaktif', chip: 'bg-cyan-400/25 border-cyan-200/30' },
+                                { icon: ShieldCheck, text: 'AI monitoring: seatbelt, fatigue, phone', chip: 'bg-violet-400/30 border-violet-200/30' },
+                                { icon: Navigation, text: 'Trip & alert otomatis untuk admin', chip: 'bg-emerald-400/25 border-emerald-200/30' },
+                            ].map(({ icon: Icon, text, chip }) => (
                                 <div key={text} className="flex items-center gap-3 text-sm text-white/90">
-                                    <span className="w-8 h-8 rounded-xl bg-white/20 border border-white/25 flex items-center justify-center flex-shrink-0">
+                                    <span className={`w-8 h-8 rounded-xl border backdrop-blur-sm flex items-center justify-center flex-shrink-0 ${chip}`}>
                                         <Icon className="w-4 h-4 text-white" />
                                     </span>
                                     {text}

@@ -6,7 +6,7 @@ import { MapContainer, Marker, Popup, Polyline, useMap, useMapEvents } from 'rea
 import MapTiles from '../../Components/MapTiles';
 import { haversineKm, fetchRoadRoute, straightLine, formatKm } from '../../utils/route';
 import L from 'leaflet';
-import { Truck, Route, Activity, Clock, MapPin, Navigation, Play, Square, Camera, AlertTriangle, Shield, Eye, Phone, User, Cigarette } from 'lucide-react';
+import { Truck, Route, Activity, Clock, MapPin, Navigation, Play, Square, Camera, AlertTriangle, Shield, Eye, Phone, User, Cigarette, Flag, Crosshair, Pause } from 'lucide-react';
 
 function resolveAiHttp() {
     const envUrl = import.meta.env?.VITE_AI_SERVICE_URL;
@@ -27,8 +27,8 @@ const AI_SERVICE_WS = resolveAiWs();
 // Kirim 2 FPS (500ms) biar admin mulus. Jangan <400ms — AI YOLO/Mediapipe ~500ms, nanti antre.
 const AI_SEND_MS = Number(import.meta.env?.VITE_AI_SEND_MS) || 500;
 
-const vehicleIcon = L.divIcon({ className: '', html: '<div style="width:36px;height:36px;background:linear-gradient(135deg,#22c55e,#06b6d4);border:3px solid #fff;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(34,197,94,0.5);font-size:16px;">🚛</div>', iconSize: [36, 36], iconAnchor: [18, 18] });
-const destIcon = L.divIcon({ className: '', html: '<div style="width:36px;height:36px;background:linear-gradient(135deg,#f59e0b,#ef4444);border:3px solid #fff;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(239,68,68,0.5);font-size:16px;">🎯</div>', iconSize: [36, 36], iconAnchor: [18, 18] });
+const vehicleIcon = L.divIcon({ className: '', html: '<div class="fv-marker fv-marker--live" style="--m:#16a34a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>', iconSize: [36, 36], iconAnchor: [18, 18] });
+const destIcon = L.divIcon({ className: '', html: '<div class="fv-marker" style="--m:#d97706"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg></div>', iconSize: [36, 36], iconAnchor: [18, 18] });
 
 function haversine(lat1, lon1, lat2, lon2) {
     const R = 6371;
@@ -486,7 +486,7 @@ export default function DriverDashboard() {
     }
 
     if (!driver) {
-        return <DriverLayout><div className="glass rounded-3xl text-center py-14 px-6"><p className="text-4xl mb-3">👤</p><p className="text-dark-500 font-semibold">Belum ada profil driver</p><p className="text-dark-500 text-sm mt-1">Hubungi admin untuk menautkan akun ini.</p></div></DriverLayout>;
+        return <DriverLayout><div className="glass tint-emerald rounded-3xl text-center py-14 px-6"><div className="inline-flex w-14 h-14 rounded-2xl bg-success-50 border border-success-100 items-center justify-center mb-3"><User className="w-7 h-7 text-success-500" /></div><p className="text-dark-900 font-semibold">Belum ada profil driver</p><p className="text-dark-500 text-sm mt-1">Hubungi admin untuk menautkan akun ini.</p></div></DriverLayout>;
     }
 
     const tracking = tripState === 'tracking';
@@ -499,12 +499,13 @@ export default function DriverDashboard() {
         <DriverLayout>
             <div className="space-y-5">
                 <PageHeader
+                    accent="green"
                     eyebrow="Driver Console"
-                    title={`Halo, ${driver.name.split(' ')[0]} 👋`}
+                    title={`Halo, ${driver.name.split(' ')[0]}`}
                     description={tracking ? `Trip #${activeTrip?.id} sedang berjalan — GPS & kamera AI aktif.` : 'Siap jalan? Mulai trip untuk mengaktifkan GPS & AI monitoring.'}
                     action={
                         tripState === 'idle' && driver.vehicle ? (
-                            <button onClick={handleStartTrip} className="btn-glow flex items-center gap-2 px-6 py-3 rounded-2xl text-white text-sm font-bold">
+                            <button onClick={handleStartTrip} className="btn-glow-green flex items-center gap-2 px-6 py-3 rounded-2xl text-white text-sm font-bold">
                                 <Play className="w-4 h-4" /> Mulai Trip
                             </button>
                         ) : busy ? (
@@ -521,18 +522,18 @@ export default function DriverDashboard() {
                 />
 
                 {tripState === 'idle' && plannedTrips.length > 0 && (
-                    <div className="glass rounded-3xl p-5 space-y-3 animate-fade-up">
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-dark-400">Tugas rute dari admin</h3>
+                    <div className="glass tint-emerald rounded-3xl p-5 space-y-3 animate-fade-up">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-success-600">Tugas rute dari admin</h3>
                         {plannedTrips.map((t) => (
-                            <div key={t.id} className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-dark-200/60 p-3.5">
+                            <div key={t.id} className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-success-200/70 p-3.5 bg-white/50">
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-bold text-dark-900">🎯 {t.origin || 'Titik awal'} → {t.destination || 'Tujuan'}</p>
+                                    <p className="text-sm font-bold text-dark-900 flex items-center gap-1.5"><Flag className="w-3.5 h-3.5 text-success-600 flex-shrink-0" />{t.origin || 'Titik awal'} → {t.destination || 'Tujuan'}</p>
                                     <p className="text-xs text-dark-500 mt-0.5">
                                         {t.vehicle?.plate_number ? `${t.vehicle.plate_number} · ` : ''}Estimasi {formatKm(t.planned_distance_km)}
                                     </p>
                                 </div>
                                 <button onClick={() => handleStartPlannedTrip(t)} disabled={busy}
-                                    className="btn-glow flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-white text-xs font-bold disabled:opacity-60 flex-shrink-0">
+                                    className="btn-glow-green flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-white text-xs font-bold disabled:opacity-60 flex-shrink-0">
                                     <Play className="w-3.5 h-3.5" /> Mulai Rute Ini
                                 </button>
                             </div>
@@ -540,38 +541,38 @@ export default function DriverDashboard() {
                     </div>
                 )}
 
-                {gpsError && <div className="glass rounded-2xl !border-danger-500/30 p-3.5 text-sm text-danger-500 animate-fade-up">⚠️ {gpsError}</div>}
-                {aiError && <div className="glass rounded-2xl !border-warning-500/30 p-3.5 text-sm text-warning-500 animate-fade-up">📷 {aiError}</div>}
+                {gpsError && <div className="glass tint-rose rounded-2xl !border-danger-500/30 p-3.5 text-sm text-danger-600 animate-fade-up flex items-start gap-2"><AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" /> {gpsError}</div>}
+                {aiError && <div className="glass tint-amber rounded-2xl !border-warning-500/30 p-3.5 text-sm text-warning-600 animate-fade-up flex items-start gap-2"><Camera className="w-4 h-4 flex-shrink-0 mt-0.5" /> {aiError}</div>}
 
                 {tracking && activeTrip?.destination && (
                     <div className="glass rounded-2xl px-5 py-3.5 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-sm animate-fade-up">
-                        <span className="font-bold text-dark-900">🎯 {activeTrip.origin || 'Awal'} → {activeTrip.destination}</span>
+                        <span className="font-bold text-dark-900 flex items-center gap-1.5"><Flag className="w-3.5 h-3.5 text-success-600 flex-shrink-0" />{activeTrip.origin || 'Awal'} → {activeTrip.destination}</span>
                         <span className="text-dark-500">Estimasi <strong className="text-dark-900">{formatKm(activeTrip.planned_distance_km)}</strong></span>
-                        {remainingKm != null && <span className="text-dark-500">Sisa <strong className="text-primary-600">{formatKm(remainingKm)}</strong></span>}
+                        {remainingKm != null && <span className="text-dark-500">Sisa <strong className="text-success-600">{formatKm(remainingKm)}</strong></span>}
                         <span className="text-dark-500">Ditempuh <strong className="text-dark-900">{distance.toFixed(2)} km</strong></span>
                     </div>
                 )}
 
                 {tracking ? (
-                    <div className="relative overflow-hidden rounded-3xl p-[1.5px] bg-gradient-to-r from-success-500 via-accent-500 to-primary-500 animate-fade-up">
-                        <div className="rounded-3xl bg-white/90 backdrop-blur-xl px-5 sm:px-7 py-5 flex flex-col sm:flex-row items-center gap-5">
-                            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-success-500">
-                                <span className="w-2.5 h-2.5 rounded-full bg-success-400 animate-pulse" /> Live Trip
+                    <div className="relative overflow-hidden rounded-3xl p-[1.5px] bg-gradient-to-r from-success-500 via-accent-500 to-primary-500 animate-fade-up shadow-[0_16px_44px_rgba(16,163,74,0.25)]">
+                        <div className="rounded-3xl bg-gradient-to-r from-success-50/95 via-accent-50/85 to-primary-50/95 backdrop-blur-xl px-5 sm:px-7 py-5 flex flex-col sm:flex-row items-center gap-5">
+                            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-success-600">
+                                <span className="w-2.5 h-2.5 rounded-full bg-success-500 animate-pulse" /> Live Trip
                             </div>
                             <div className="font-display text-4xl sm:text-5xl font-bold tabular-nums text-dark-900 tracking-tight">{fmt(elapsed)}</div>
                             <div className="flex items-center gap-6 sm:ml-auto text-center">
                                 <div><p className="font-display text-xl font-bold text-dark-900 tabular-nums">{gpsPos ? Math.round(gpsPos.speed * 3.6) : 0}<span className="text-xs text-dark-400 font-sans font-medium"> km/h</span></p><p className="text-[10px] uppercase tracking-widest text-dark-500 font-bold">Speed</p></div>
-                                <div className="w-px h-10 bg-dark-200/70" />
+                                <div className="w-px h-10 bg-success-200/80" />
                                 <div><p className="font-display text-xl font-bold text-dark-900 tabular-nums">{distance.toFixed(2)}<span className="text-xs text-dark-400 font-sans font-medium"> km</span></p><p className="text-[10px] uppercase tracking-widest text-dark-500 font-bold">Ditempuh</p></div>
-                                <div className="w-px h-10 bg-dark-200/70" />
+                                <div className="w-px h-10 bg-success-200/80" />
                                 <div><p className="font-display text-xl font-bold text-dark-900 font-mono">{driver.vehicle?.plate_number}</p><p className="text-[10px] uppercase tracking-widest text-dark-500 font-bold">Unit</p></div>
                             </div>
                         </div>
                     </div>
                 ) : (
                     !driver.vehicle && (
-                        <div className="glass rounded-2xl p-5 flex items-center gap-4 animate-fade-up">
-                            <span className="text-3xl">🚛</span>
+                        <div className="glass tint-emerald rounded-2xl p-5 flex items-center gap-4 animate-fade-up">
+                            <span className="text-success-600 flex-shrink-0"><Truck className="w-7 h-7" /></span>
                             <div><p className="text-sm font-bold text-dark-900">Belum ada kendaraan</p><p className="text-xs text-dark-400">Minta admin untuk assign unit sebelum mulai trip.</p></div>
                         </div>
                     )
@@ -588,9 +589,9 @@ export default function DriverDashboard() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     <div className="lg:col-span-2 glass rounded-3xl overflow-hidden">
-                        <div className="px-5 py-4 border-b border-dark-200/60 flex items-center justify-between">
-                            <h2 className="text-sm font-bold text-dark-900 flex items-center gap-2"><Route className="w-4 h-4 text-primary-500" /> {tracking ? 'Peta Live' : 'Posisi Terakhir'}</h2>
-                            {tracking && <span className="flex items-center gap-1.5 text-[11px] font-bold text-success-500"><span className="w-1.5 h-1.5 rounded-full bg-success-400 animate-pulse" /> LIVE</span>}
+                        <div className="px-5 py-4 border-b border-success-100/70 bg-gradient-to-r from-success-50/60 via-transparent to-accent-50/50 flex items-center justify-between">
+                            <h2 className="text-sm font-bold text-dark-900 flex items-center gap-2"><Route className="w-4 h-4 text-success-600" /> {tracking ? 'Peta Live' : 'Posisi Terakhir'}</h2>
+                            {tracking && <span className="flex items-center gap-1.5 text-[11px] font-bold text-success-600"><span className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse" /> LIVE</span>}
                         </div>
                         <div className="h-[380px] relative">
                             <MapContainer center={gpsPos ? [gpsPos.lat, gpsPos.lng] : [-6.2088, 106.8456]} zoom={15} className="h-full w-full z-0" zoomControl={false}>
@@ -600,18 +601,18 @@ export default function DriverDashboard() {
                                 {gpsPos && <Marker position={[gpsPos.lat, gpsPos.lng]} icon={vehicleIcon}><Popup><div className="text-sm"><p className="font-bold">{Math.round(gpsPos.speed * 3.6)} km/h</p><p className="font-mono text-xs">{gpsPos.lat.toFixed(5)}, {gpsPos.lng.toFixed(5)}</p></div></Popup></Marker>}
                                 {activeTrip?.dest_latitude && activeTrip?.dest_longitude && (
                                     <Marker position={[Number(activeTrip.dest_latitude), Number(activeTrip.dest_longitude)]} icon={destIcon}>
-                                        <Popup><div className="text-sm"><p className="font-bold">🎯 {activeTrip.destination || 'Tujuan'}</p>{remainingKm != null && <p>Sisa {formatKm(remainingKm)}</p>}</div></Popup>
+                                        <Popup><div className="text-sm"><p className="font-bold">{activeTrip.destination || 'Tujuan'}</p>{remainingKm != null && <p>Sisa {formatKm(remainingKm)}</p>}</div></Popup>
                                     </Marker>
                                 )}
                                 {routeCoords.length > 1 && <Polyline positions={routeCoords} pathOptions={{ color: '#2563eb', weight: 4, opacity: 0.85, dashArray: '10 8' }} />}
                             </MapContainer>
                             <button onClick={() => setFollow((f) => !f)} title={follow ? 'Peta mengikuti kendaraan' : 'Peta bebas — klik untuk mengikuti lagi'}
-                                className={`absolute top-3 right-3 z-[600] px-3 py-2 rounded-xl text-[11px] font-bold shadow-lg backdrop-blur transition-all ${follow ? 'bg-primary-600 text-white' : 'glass-strong text-dark-900'}`}>
-                                {follow ? '📍 Mengikuti' : '⏸️ Bebas'}
+                                className={`absolute top-3 right-3 z-[600] px-3 py-2 rounded-xl text-[11px] font-bold shadow-lg backdrop-blur transition-all flex items-center gap-1.5 ${follow ? 'bg-success-600 text-white' : 'glass-strong text-dark-900'}`}>
+                                {follow ? <><Crosshair className="w-3.5 h-3.5" /> Mengikuti</> : <><Pause className="w-3.5 h-3.5" /> Bebas</>}
                             </button>
                         </div>
                         {tracking && gpsPos && (
-                            <div className="px-5 py-3.5 border-t border-dark-200/60 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                            <div className="px-5 py-3.5 border-t border-success-100/70 bg-gradient-to-r from-success-50/60 via-transparent to-accent-50/50 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                                 <InfoMini label="Latitude" value={gpsPos.lat.toFixed(6)} mono />
                                 <InfoMini label="Longitude" value={gpsPos.lng.toFixed(6)} mono />
                                 <InfoMini label="Akurasi" value={gpsPos.accuracy < 1 ? '<1 m' : `${Math.round(gpsPos.accuracy)} m`} />
@@ -633,7 +634,7 @@ export default function DriverDashboard() {
                             </div>
                         </div>
                         {tracking && (
-                            <div className="rounded-3xl p-[1.5px] bg-gradient-to-br from-primary-500/50 to-accent-500/30">
+                            <div className="rounded-3xl p-[1.5px] bg-gradient-to-br from-success-500/60 to-accent-500/35">
                                 <div className="rounded-3xl bg-white/90 p-5">
                                     <h3 className="text-xs font-bold uppercase tracking-widest text-dark-400 mb-3">Kondisi AI</h3>
                                     <div className="grid grid-cols-2 gap-2">
@@ -651,10 +652,10 @@ export default function DriverDashboard() {
                 {tracking && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                         <div className="glass rounded-3xl overflow-hidden">
-                            <div className="px-5 py-4 border-b border-dark-200/60 flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-dark-900 flex items-center gap-2"><Camera className="w-4 h-4 text-accent-400" /> Kamera Driver</h3>
+                            <div className="px-5 py-4 border-b border-success-100/70 bg-gradient-to-r from-success-50/60 via-transparent to-accent-50/50 flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-dark-900 flex items-center gap-2"><Camera className="w-4 h-4 text-success-600" /> Kamera Driver</h3>
                                 {cameraActive ? (
-                                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-success-500"><span className="w-1.5 h-1.5 rounded-full bg-success-400 animate-pulse" /> Streaming</span>
+                                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-success-600"><span className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse" /> Streaming</span>
                                 ) : (
                                     <span className="text-[11px] text-dark-500">Mati</span>
                                 )}
@@ -671,9 +672,9 @@ export default function DriverDashboard() {
                         </div>
 
                         <div className="glass rounded-3xl overflow-hidden">
-                            <div className="px-5 py-4 border-b border-dark-200/60 flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-dark-900 flex items-center gap-2"><Shield className="w-4 h-4 text-accent-400" /> Deteksi AI</h3>
-                                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${aiStatus === 'connected' ? 'bg-success-500/15 text-success-500' : aiStatus === 'error' ? 'bg-danger-500/15 text-danger-500' : 'bg-dark-100/70 text-dark-500'}`}>
+                            <div className="px-5 py-4 border-b border-success-100/70 bg-gradient-to-r from-success-50/60 via-transparent to-accent-50/50 flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-dark-900 flex items-center gap-2"><Shield className="w-4 h-4 text-success-600" /> Deteksi AI</h3>
+                                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${aiStatus === 'connected' ? 'bg-success-100 text-success-700' : aiStatus === 'error' ? 'bg-danger-100 text-danger-700' : 'bg-dark-100 text-dark-500'}`}>
                                     {aiStatus === 'connected' ? '● Terhubung' : aiStatus === 'error' ? '● Error' : '○ Siaga'}
                                 </span>
                             </div>
@@ -686,7 +687,7 @@ export default function DriverDashboard() {
                                     <AiIndicator icon={Cigarette} label="Tanpa Rokok" active={!aiResults.smoking} danger={aiResults.smoking} />
                                     <AiIndicator icon={Navigation} label="Fokus Depan" active={!aiResults.looking_away} danger={aiResults.looking_away} />
                                 </div>
-                                <div className="mt-4 pt-4 border-t border-dark-200/60 grid grid-cols-3 gap-2 text-xs">
+                                <div className="mt-4 pt-4 border-t border-success-100/70 grid grid-cols-3 gap-2 text-xs">
                                     <div className="glass rounded-xl px-3 py-2 text-center"><p className="text-dark-500 text-[10px] uppercase font-bold">Mata</p><p className="text-dark-900 font-bold">{(aiResults.eye_closed * 100).toFixed(0)}%</p></div>
                                     <div className="glass rounded-xl px-3 py-2 text-center"><p className="text-dark-500 text-[10px] uppercase font-bold">Yaw</p><p className="text-dark-900 font-bold">{aiResults.head_pose?.yaw?.toFixed(0) || 0}°</p></div>
                                     <div className="glass rounded-xl px-3 py-2 text-center"><p className="text-dark-500 text-[10px] uppercase font-bold">Pitch</p><p className="text-dark-900 font-bold">{aiResults.head_pose?.pitch?.toFixed(0) || 0}°</p></div>
@@ -717,7 +718,7 @@ function InfoMini({ label, value, mono }) {
 
 function AiMini({ label, ok, warn }) {
     return (
-        <div className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[11px] font-bold border ${warn ? 'bg-danger-500/10 border-danger-500/30 text-danger-500' : ok ? 'bg-success-500/10 border-success-500/25 text-success-500' : 'bg-dark-100/60 border-dark-200/60 text-dark-500'}`}>
+        <div className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[11px] font-bold border ${warn ? 'bg-danger-100 border-danger-200 text-danger-700' : ok ? 'bg-success-100 border-success-200 text-success-700' : 'bg-dark-100/60 border-dark-200/60 text-dark-500'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${warn ? 'bg-danger-400' : ok ? 'bg-success-400' : 'bg-dark-500'}`} />{label}
         </div>
     );
@@ -725,9 +726,9 @@ function AiMini({ label, ok, warn }) {
 
 function AiIndicator({ icon: Icon, label, active, danger }) {
     return (
-        <div className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${danger ? 'bg-danger-500/10 border-danger-500/30 shadow-[0_0_20px_rgba(239,68,68,0.2)]' : active ? 'bg-success-500/10 border-success-500/25' : 'bg-dark-100/60 border-dark-200/60'}`}>
-            <Icon className={`w-4 h-4 flex-shrink-0 ${danger ? 'text-danger-500' : active ? 'text-success-500' : 'text-dark-500'}`} />
-            <span className={`text-xs font-semibold ${danger ? 'text-danger-500' : active ? 'text-success-500' : 'text-dark-500'}`}>{label}</span>
+        <div className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${danger ? 'bg-danger-100 border-danger-200 shadow-[0_0_20px_rgba(239,68,68,0.18)]' : active ? 'bg-success-100 border-success-200' : 'bg-dark-100/60 border-dark-200/60'}`}>
+            <Icon className={`w-4 h-4 flex-shrink-0 ${danger ? 'text-danger-600' : active ? 'text-success-600' : 'text-dark-500'}`} />
+            <span className={`text-xs font-semibold ${danger ? 'text-danger-700' : active ? 'text-success-700' : 'text-dark-500'}`}>{label}</span>
         </div>
     );
 }

@@ -3,7 +3,7 @@ import { apiFetch } from '../../utils/api';
 import AdminLayout from '../../Layouts/AdminLayout';
 import PageHeader from '../../Components/PageHeader';
 import { PageLoader } from '../../Components/LoadingSpinner';
-import { Send, Loader2, MessageCircle, User, Trash2 } from 'lucide-react';
+import { Send, Loader2, MessageCircle, User, Trash2, AlertTriangle } from 'lucide-react';
 
 const fmtTime = (ts) => ts ? new Date(ts).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
 const preview = (s) => (s || '').length > 42 ? `${s.slice(0, 42)}…` : (s || 'Belum ada pesan');
@@ -172,21 +172,21 @@ export default function AdminChat() {
     return (
         <AdminLayout>
             <div className="space-y-6">
-                <PageHeader eyebrow="Komunikasi" title="Chat Sopir" description="Terima laporan kendala & jawab pertanyaan sopir secara live."
-                    action={<span className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border ${connected ? 'bg-success-500/10 border-success-500/30 text-success-500' : 'bg-dark-100/60 border-dark-200/70 text-dark-500'}`}><span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-success-400 animate-pulse' : 'bg-dark-500'}`} />{connected ? 'Live' : 'Polling'}</span>} />
+                <PageHeader eyebrow="Komunikasi" title="Chat Sopir" description="Terima laporan kendala & jawab pertanyaan sopir secara live." accent="blue"
+                    action={<span className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full border ${connected ? 'bg-success-100 border-success-200 text-success-700' : 'bg-dark-100/60 border-dark-200/70 text-dark-500'}`}><span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-success-500 animate-pulse' : 'bg-dark-500'}`} />{connected ? 'Live' : 'Polling'}</span>} />
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     <div className="glass rounded-3xl overflow-hidden lg:col-span-1">
-                        <div className="px-5 py-4 border-b border-dark-200/60">
+                        <div className="px-5 py-4 border-b border-primary-100/70 bg-gradient-to-r from-primary-50/70 via-transparent to-violet-50/50">
                             <h3 className="text-sm font-bold text-dark-900">Percakapan ({threads.length})</h3>
                         </div>
-                        <div className="max-h-[300px] lg:max-h-[560px] overflow-y-auto divide-y divide-dark-200/40">
+                        <div className="max-h-[300px] lg:max-h-[560px] overflow-y-auto divide-y divide-primary-100/70">
                             {threads.length === 0 && <p className="p-6 text-sm text-dark-400 text-center">Belum ada chat masuk.</p>}
                             {threads.map((t) => {
                                 const active = Number(t.driver?.id) === Number(selectedId);
                                 return (
                                     <button key={t.driver?.id} onClick={() => selectThread(t.driver.id)}
-                                        className={`w-full text-left px-5 py-3.5 flex items-center gap-3 transition-colors ${active ? 'bg-primary-500/10' : 'hover:bg-dark-100/50'}`}>
-                                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center flex-shrink-0">
+                                        className={`w-full text-left px-5 py-3.5 flex items-center gap-3 transition-colors ${active ? 'bg-primary-50 border-primary-200' : 'hover:bg-primary-50/70'}`}>
+                                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 via-violet-500 to-accent-500 flex items-center justify-center flex-shrink-0">
                                             <User className="w-5 h-5 text-white" />
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -199,16 +199,16 @@ export default function AdminChat() {
                             })}
                         </div>
                     </div>
-                    <div className="glass rounded-3xl overflow-hidden lg:col-span-2 flex flex-col" style={{ minHeight: '480px', maxHeight: '640px' }}>
+                    <div className="glass tint-indigo rounded-3xl overflow-hidden lg:col-span-2 flex flex-col" style={{ minHeight: '480px', maxHeight: '640px' }}>
                         {!selectedId ? (
                             <div className="flex-1 flex flex-col items-center justify-center gap-2 p-10 text-center">
-                                <MessageCircle className="w-10 h-10 text-dark-300" />
+                                <MessageCircle className="w-10 h-10 text-primary-300" />
                                 <p className="text-sm text-dark-400">Pilih percakapan di kiri untuk membalas.</p>
                             </div>
                         ) : (
                             <>
-                                <div className="px-5 py-3.5 border-b border-dark-200/60 flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center flex-shrink-0"><User className="w-4 h-4 text-white" /></div>
+                                <div className="px-5 py-3.5 border-b border-primary-100/70 bg-gradient-to-r from-primary-50/70 via-transparent to-violet-50/50 flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 via-violet-500 to-accent-500 flex items-center justify-center flex-shrink-0"><User className="w-4 h-4 text-white" /></div>
                                     <div className="min-w-0 flex-1">
                                         <p className="text-sm font-bold text-dark-900 truncate">{selected?.driver?.name}</p>
                                         <p className="text-[11px] text-dark-400 truncate">{selected?.driver?.email} {selected?.driver?.phone ? `· ${selected.driver.phone}` : ''}</p>
@@ -223,10 +223,10 @@ export default function AdminChat() {
                                         return (
                                             <div key={m.id} className={`flex items-center gap-1 group ${mine ? 'justify-end' : 'justify-start'}`}>
                                                 <button onClick={() => handleDelete(m.id)} title="Hapus pesan"
-                                                    className={`p-1.5 rounded-lg text-dark-300 hover:text-danger-500 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity flex-shrink-0 ${mine ? '' : 'order-2'}`}>
+                                                    className={`p-1.5 rounded-lg text-dark-400 hover:text-danger-500 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity flex-shrink-0 ${mine ? '' : 'order-2'}`}>
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </button>
-                                                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 ${mine ? 'bg-gradient-to-r from-primary-600 to-accent-500 text-white rounded-br-md' : 'glass-strong text-dark-900 rounded-bl-md'}`}>
+                                                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 ${mine ? 'bg-gradient-to-r from-primary-600 via-violet-600 to-accent-500 text-white rounded-br-md' : 'glass-strong text-dark-900 rounded-bl-md'}`}>
                                                     {!mine && <p className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-0.5">{selected?.driver?.name?.split(' ')[0] || 'Sopir'}</p>}
                                                     <p className="text-sm whitespace-pre-wrap break-words">{m.body}</p>
                                                     <p className={`text-[10px] mt-1 ${mine ? 'text-white/70' : 'text-dark-400'}`}>{fmtTime(m.created_at)}</p>
@@ -236,7 +236,7 @@ export default function AdminChat() {
                                     })}
                                     <div ref={bottomRef} />
                                 </div>
-                                <form onSubmit={handleSend} className="p-3 sm:p-4 border-t border-dark-200/60 flex gap-2">
+                                <form onSubmit={handleSend} className="p-3 sm:p-4 border-t border-primary-100/70 flex gap-2">
                                     <input value={text} onChange={(e) => setText(e.target.value)} placeholder={`Balas ke ${selected?.driver?.name || 'sopir'}…`}
                                         maxLength={2000} className="input-glass flex-1 rounded-xl px-4 py-3 text-sm text-dark-900 placeholder-dark-300" />
                                     <button type="submit" disabled={sending || !text.trim()}
@@ -245,7 +245,7 @@ export default function AdminChat() {
                                         <span className="hidden sm:inline">Kirim</span>
                                     </button>
                                 </form>
-                                {sendError && <p className="px-4 pb-3 text-xs text-danger-500">⚠️ {sendError}</p>}
+                                {sendError && <p className="px-4 pb-3 text-xs text-danger-500 flex items-start gap-1.5"><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" /> {sendError}</p>}
                             </>
                         )}
                     </div>

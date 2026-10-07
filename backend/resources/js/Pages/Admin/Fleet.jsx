@@ -6,19 +6,19 @@ import PageHeader from '../../Components/PageHeader';
 import { PageLoader } from '../../Components/LoadingSpinner';
 import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
 import MapTiles from '../../Components/MapTiles';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Truck, CheckCircle2, AlertTriangle } from 'lucide-react';
 import L from 'leaflet';
 
 const vehicleIcon = L.divIcon({
     className: '',
-    html: '<div style="width:32px;height:32px;background:#3b82f6;border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(59,130,246,0.6);font-size:14px;">🚛</div>',
+    html: '<div class="fv-marker" style="--m:#2563eb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>',
     iconSize: [32, 32],
     iconAnchor: [16, 16],
 });
 
 const activeVehicleIcon = L.divIcon({
     className: '',
-    html: '<div style="width:36px;height:36px;background:#22c55e;border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 16px rgba(34,197,94,0.7);font-size:15px;animation:pulse 2s infinite;">🚛</div>',
+    html: '<div class="fv-marker fv-marker--live" style="--m:#16a34a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>',
     iconSize: [36, 36],
     iconAnchor: [18, 18],
 });
@@ -193,6 +193,7 @@ export default function Fleet() {
                     eyebrow="Fleet Monitoring"
                     title="Fleet Live Map"
                     description={`${vehicles.length} unit — ${totalActive} dengan lokasi terkini.`}
+                    accent="cyan"
                     action={
                         <div className="flex items-center gap-2">
                             <button onClick={() => { setShowForm(true); setFormError(''); setNotice(''); }}
@@ -200,18 +201,18 @@ export default function Fleet() {
                                 <Plus className="w-4 h-4" /> Tambah Unit
                             </button>
                             <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl glass text-xs font-semibold text-dark-700">
-                                <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-success-400 animate-pulse' : 'bg-warning-400'}`} />
+                                <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-success-500 animate-pulse' : 'bg-warning-500'}`} />
                                 {wsConnected ? 'Live WebSocket' : 'Polling 10s'}
                             </div>
                         </div>
                     }
                 />
-                {notice && <div className="glass rounded-2xl !border-success-500/30 p-3.5 text-sm text-success-500 animate-fade-up">✅ {notice}</div>}
+                {notice && <div className="glass rounded-2xl !border-success-200 bg-success-100/60 p-3.5 text-sm text-success-700 font-medium animate-fade-up flex items-center gap-2"><CheckCircle2 className="w-4 h-4 flex-shrink-0" /> {notice}</div>}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     {/* Map */}
                     <div className="lg:col-span-2">
-                        <div className="h-[540px] rounded-3xl overflow-hidden border border-dark-200/70 shadow-[0_24px_64px_rgba(15,23,42,0.15)]">
+                        <div className="h-[540px] rounded-3xl overflow-hidden border border-accent-200/70 shadow-[0_24px_64px_rgba(6,182,212,0.16)]">
                             <MapContainer
                                 center={[-6.2088, 106.8456]}
                                 zoom={12}
@@ -240,8 +241,8 @@ export default function Fleet() {
                                                             {new Date(v.latest_location.timestamp).toLocaleTimeString()}
                                                         </p>
                                                     )}
-                                                    <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-semibold ${v.is_live ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                        {v.is_live ? '🟢 Live' : '⏱ Last Known'}
+                                                    <span className={`inline-flex items-center gap-1.5 mt-1 text-xs px-2 py-0.5 rounded-full font-semibold ${v.is_live ? 'bg-success-100 text-success-700 border border-success-200' : 'bg-dark-100 text-dark-600 border border-dark-200'}`}>
+                                                        {v.is_live ? <><span className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse" /> Live</> : 'Last Known'}
                                                     </span>
                                                 </div>
                                             </Popup>
@@ -255,23 +256,23 @@ export default function Fleet() {
                     {/* Vehicle List Sidebar */}
                     <div className="space-y-2.5 max-h-[540px] overflow-y-auto pr-1">
                         {vehiclesWithLiveLocation.length === 0 && (
-                            <div className="glass rounded-2xl text-center py-10"><p className="text-3xl mb-2">🚛</p><p className="text-dark-400 text-sm">Belum ada kendaraan.</p></div>
+                            <div className="glass tint-cyan rounded-2xl text-center py-10"><div className="inline-flex w-14 h-14 rounded-2xl bg-primary-50 border border-primary-100 items-center justify-center mb-2"><Truck className="w-7 h-7 text-primary-500" /></div><p className="text-dark-400 text-sm">Belum ada kendaraan.</p></div>
                         )}
                         {vehiclesWithLiveLocation.map((v) => (
                             <Link
                                 key={v.id}
                                 href={`/admin/fleet/${v.id}`}
-                                className={`block rounded-2xl border p-4 transition-all glass-hover ${
+                                className={`block rounded-2xl border p-4 transition-all glass glass-hover ${
                                     v.is_live
-                                        ? '!border-success-500/30 bg-success-500/[0.06]'
-                                        : 'glass'
+                                        ? '!border-success-200 bg-success-100/70'
+                                        : 'hover:!border-accent-500/40'
                                 }`}
                             >
                                 <div className="flex items-center justify-between mb-1">
                                     <p className="text-sm font-bold text-dark-900 font-mono tracking-wide">{v.plate_number}</p>
                                     {v.is_live && (
-                                        <span className="flex items-center gap-1 text-[11px] font-bold text-success-500">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-success-400 animate-pulse" />
+                                        <span className="flex items-center gap-1 text-[11px] font-bold text-success-700">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse" />
                                             LIVE
                                         </span>
                                     )}
@@ -296,12 +297,12 @@ export default function Fleet() {
 
                 {showForm && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowForm(false)}>
-                        <div className="glass-strong rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="glass-strong tint-cyan rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-display text-lg font-bold text-dark-900">Tambah Kendaraan</h3>
-                                <button onClick={() => setShowForm(false)} className="p-2 rounded-xl glass glass-hover"><X className="w-4 h-4" /></button>
+                                <button onClick={() => setShowForm(false)} className="p-2 rounded-xl glass glass-hover hover:text-accent-600 hover:!border-accent-500/40"><X className="w-4 h-4" /></button>
                             </div>
-                            {formError && <div className="p-3 rounded-xl bg-danger-500/10 border border-danger-500/30 text-sm text-danger-500 mb-4">⚠️ {formError}</div>}
+                            {formError && <div className="p-3 rounded-xl bg-danger-100 border border-danger-200 text-sm text-danger-700 mb-4 flex items-start gap-2"><AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" /> {formError}</div>}
                             <form onSubmit={handleCreate} className="space-y-3.5">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>

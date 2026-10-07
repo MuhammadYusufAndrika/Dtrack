@@ -4,7 +4,7 @@ import MapTiles from './MapTiles';
 import StatusBadge from './StatusBadge';
 import L from 'leaflet';
 import { haversineKm, fetchRoadRoute, straightLine, formatKm, matchRoadTrail } from '../utils/route';
-import { Route, Gauge, Clock, Flag, Navigation, Video } from 'lucide-react';
+import { Route, Gauge, Clock, Flag, Navigation, Video, AlertTriangle } from 'lucide-react';
 
 function resolveAiBase() {
     const envUrl = import.meta.env?.VITE_AI_SERVICE_URL;
@@ -14,9 +14,9 @@ function resolveAiBase() {
     return `http://${hostname}:5000`;
 }
 
-const originIcon = L.divIcon({ className: '', html: '<div style="width:32px;height:32px;background:linear-gradient(135deg,#22c55e,#06b6d4);border:3px solid #fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;">📍</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
-const destIcon = L.divIcon({ className: '', html: '<div style="width:32px;height:32px;background:linear-gradient(135deg,#f59e0b,#ef4444);border:3px solid #fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;">🎯</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
-const posIcon = L.divIcon({ className: '', html: '<div style="width:30px;height:30px;background:linear-gradient(135deg,#2563eb,#06b6d4);border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;">🚛</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+const originIcon = L.divIcon({ className: '', html: '<div class="fv-marker" style="--m:#16a34a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></div>', iconSize: [32, 32], iconAnchor: [16, 16] });
+const destIcon = L.divIcon({ className: '', html: '<div class="fv-marker" style="--m:#d97706"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg></div>', iconSize: [32, 32], iconAnchor: [16, 16] });
+const posIcon = L.divIcon({ className: '', html: '<div class="fv-marker" style="--m:#2563eb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>', iconSize: [30, 30], iconAnchor: [15, 15] });
 
 function FitBounds({ points }) {
     const map = useMap();
@@ -167,7 +167,7 @@ export default function TripDetail({ tripId, fetchFn, onDeleted }) {
     }, [data?.trip?.id, data?.path?.length]);
 
     if (loading) return <div className="flex items-center justify-center py-16"><div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>;
-    if (error) return <div className="p-4 rounded-xl bg-danger-500/10 border border-danger-500/30 text-sm text-danger-500">⚠️ {error}</div>;
+    if (error) return <div className="p-4 rounded-xl bg-danger-100 border border-danger-200 text-sm text-danger-700 flex items-start gap-2"><AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" /> {error}</div>;
     if (!data) return null;
 
     const { trip: t, session, path = [], path_source, path_truncated } = data;
@@ -203,9 +203,9 @@ export default function TripDetail({ tripId, fetchFn, onDeleted }) {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {stats.map(({ icon: Icon, label, value }) => (
-                    <div key={label} className="glass rounded-2xl px-3.5 py-3">
-                        <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-dark-500 font-bold"><Icon className="w-3.5 h-3.5" />{label}</p>
+                {stats.map(({ icon: Icon, label, value }, i) => (
+                    <div key={label} className={`glass ${i % 2 ? 'tint-emerald' : 'tint-indigo'} rounded-2xl px-3.5 py-3`}>
+                        <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-dark-500 font-bold"><Icon className={`w-3.5 h-3.5 ${i % 2 ? 'text-success-600' : 'text-primary-600'}`} />{label}</p>
                         <p className="text-sm font-bold text-dark-900 mt-1">{value}</p>
                     </div>
                 ))}
@@ -220,12 +220,12 @@ export default function TripDetail({ tripId, fetchFn, onDeleted }) {
                         {displayTrail.length > 1 && <Polyline positions={displayTrail} pathOptions={{ color: '#22c55e', weight: 4, opacity: 0.9 }} />}
                         {t.start_latitude && t.start_longitude && (
                             <Marker position={[Number(t.start_latitude), Number(t.start_longitude)]} icon={originIcon}>
-                                <Popup><div className="text-sm"><p className="font-bold">📍 {t.origin || 'Titik awal'}</p></div></Popup>
+                                <Popup><div className="text-sm"><p className="font-bold">{t.origin || 'Titik awal'}</p></div></Popup>
                             </Marker>
                         )}
                         {t.dest_latitude && t.dest_longitude && (
                             <Marker position={[Number(t.dest_latitude), Number(t.dest_longitude)]} icon={destIcon}>
-                                <Popup><div className="text-sm"><p className="font-bold">🎯 {t.destination || 'Tujuan'}</p></div></Popup>
+                                <Popup><div className="text-sm"><p className="font-bold">{t.destination || 'Tujuan'}</p></div></Popup>
                             </Marker>
                         )}
                         {lastPos && (
@@ -246,7 +246,7 @@ export default function TripDetail({ tripId, fetchFn, onDeleted }) {
 
             <div className="glass rounded-2xl p-4">
                 <h4 className="text-xs font-bold uppercase tracking-widest text-dark-400 mb-3 flex items-center gap-1.5">
-                    <Video className="w-4 h-4" /> Rekaman kamera trip ini
+                    <Video className="w-4 h-4 text-accent-600" /> Rekaman kamera trip ini
                 </h4>
                 {recLoading ? (
                     <p className="text-xs text-dark-400">Memuat daftar rekaman…</p>
@@ -277,13 +277,13 @@ export default function TripDetail({ tripId, fetchFn, onDeleted }) {
                 )}
             </div>
 
-            <div className="glass rounded-2xl p-4 !border-danger-500/20 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="glass tint-rose rounded-2xl p-4 !border-danger-200 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-dark-900">Hapus history trip ini</p>
                     <p className="text-xs text-dark-400">Trip + jejak GPS + rekaman videonya ikut terhapus (hemat DB & disk).</p>
                 </div>
                 <button onClick={handleDeleteTrip} disabled={deleting}
-                    className="px-4 py-2.5 rounded-xl bg-danger-500/10 border border-danger-500/30 text-danger-500 text-xs font-bold hover:bg-danger-500 hover:text-white transition-colors disabled:opacity-50 flex-shrink-0">
+                    className="px-4 py-2.5 rounded-xl bg-danger-100 border border-danger-200 text-danger-700 text-xs font-bold hover:bg-danger-500 hover:border-danger-500 hover:text-white transition-colors disabled:opacity-50 flex-shrink-0">
                     {deleting ? 'Menghapus…' : 'Hapus Trip'}
                 </button>
             </div>

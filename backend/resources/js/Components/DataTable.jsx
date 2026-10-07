@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, ChevronUp, ChevronDown, Inbox } from 'lucide-react';
 
 export default function DataTable({ columns, data, keyExtractor, searchable, searchKeys, searchPlaceholder, pageSize = 15 }) {
     const [search, setSearch] = useState('');
@@ -46,9 +46,9 @@ export default function DataTable({ columns, data, keyExtractor, searchable, sea
             <div className="overflow-x-auto">
                 <table className="w-full">
                     <thead>
-                        <tr className="border-b border-dark-200/60 bg-dark-100/50">
+                        <tr className="border-b border-primary-100/80 bg-gradient-to-r from-primary-50/90 via-violet-50/60 to-accent-50/70">
                             {columns.map((col) => (
-                                <th key={col.key} className={`px-5 py-3.5 text-left text-[11px] font-bold text-dark-400 uppercase tracking-wider ${col.sortable ? 'cursor-pointer hover:text-dark-900 select-none' : ''}`}
+                                <th key={col.key} className={`px-5 py-3.5 text-left text-[11px] font-bold text-dark-500 uppercase tracking-wider ${col.sortable ? 'cursor-pointer hover:text-primary-600 select-none' : ''}`}
                                     onClick={() => {
                                         if (!col.sortable) return;
                                         if (sortKey === col.key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -64,7 +64,7 @@ export default function DataTable({ columns, data, keyExtractor, searchable, sea
                     </thead>
                     <tbody className="divide-y divide-dark-200/50">
                         {paged.map((row) => (
-                            <tr key={keyExtractor(row)} className="hover:bg-primary-500/[0.05] transition-colors group">
+                            <tr key={keyExtractor(row)} className="hover:bg-primary-500/[0.06] transition-colors group">
                                 {columns.map((col) => (
                                     <td key={col.key} className="px-5 py-3.5 text-sm">{col.render ? col.render(row) : <span className="text-dark-600">{String(row[col.key] ?? '')}</span>}</td>
                                 ))}
@@ -72,8 +72,11 @@ export default function DataTable({ columns, data, keyExtractor, searchable, sea
                         ))}
                         {paged.length === 0 && (
                             <tr><td colSpan={columns.length} className="px-4 py-14 text-center">
-                                <p className="text-3xl mb-2">📭</p>
-                                <p className="text-dark-400 text-sm">Tidak ada data</p>
+                                <span className="inline-flex w-12 h-12 rounded-2xl bg-primary-50 border border-primary-100 items-center justify-center mb-3">
+                                    <Inbox className="w-6 h-6 text-primary-400" />
+                                </span>
+                                <p className="text-dark-500 text-sm font-semibold">Tidak ada data</p>
+                                <p className="text-dark-300 text-xs mt-0.5">Coba ubah kata kunci pencarian</p>
                             </td></tr>
                         )}
                     </tbody>
@@ -86,7 +89,7 @@ export default function DataTable({ columns, data, keyExtractor, searchable, sea
                     <div className="flex gap-1.5">
                         {Array.from({ length: pages }, (_, i) => (
                             <button key={i} onClick={() => setPage(i)}
-                                className={`min-w-8 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${page === i ? 'btn-glow text-white' : 'glass text-dark-400 hover:text-dark-900'}`}>
+                                className={`min-w-8 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${page === i ? 'btn-glow text-white shadow-[0_6px_16px_rgba(37,99,235,0.35)]' : 'glass text-dark-400 hover:text-primary-600 hover:border-primary-500/40'}`}>
                                 {i + 1}
                             </button>
                         ))}

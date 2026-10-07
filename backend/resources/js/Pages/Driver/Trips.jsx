@@ -40,16 +40,16 @@ export default function DriverTrips() {
     return (
         <DriverLayout>
             <div className="space-y-5">
-                <PageHeader eyebrow="Riwayat" title="Trip Saya" description={`${trips.length} perjalanan — manual maupun assign admin.`} />
+                <PageHeader accent="green" eyebrow="Riwayat" title="Trip Saya" description={`${trips.length} perjalanan — manual maupun assign admin.`} />
                 {trips.length === 0 ? (
-                    <div className="glass rounded-3xl text-center py-14"><p className="text-4xl mb-3">🛣️</p><p className="text-dark-900 font-semibold">Belum ada trip</p><p className="text-dark-500 text-sm mt-1">Mulai trip pertama dari dashboard.</p></div>
+                    <div className="glass tint-emerald rounded-3xl text-center py-14"><div className="inline-flex w-14 h-14 rounded-2xl bg-success-50 border border-success-100 items-center justify-center mb-3 mx-auto"><Route className="w-7 h-7 text-success-500" /></div><p className="text-dark-900 font-semibold">Belum ada trip</p><p className="text-dark-500 text-sm mt-1">Mulai trip pertama dari dashboard.</p></div>
                 ) : (
                     <div className="space-y-3">
                         {trips.map((t) => (
-                            <button key={t.id} onClick={() => setDetailId(t.id)} className="w-full text-left glass glass-hover rounded-2xl p-4 flex items-center gap-4">
-                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-success-500 to-accent-500 flex items-center justify-center flex-shrink-0"><Route className="w-5 h-5 text-white" /></div>
+                            <button key={t.id} onClick={() => setDetailId(t.id)} className="group w-full text-left glass glass-hover rounded-2xl p-4 flex items-center gap-4">
+                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-success-500 to-accent-500 flex items-center justify-center flex-shrink-0 shadow-[0_8px_20px_rgba(16,163,74,0.3)]"><Route className="w-5 h-5 text-white" /></div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-bold text-dark-900">
+                                    <p className="text-sm font-bold text-dark-900 group-hover:text-success-700 transition-colors">
                                         {t.origin || t.destination ? `${t.origin || 'Titik awal'} → ${t.destination || 'Tujuan'}` : `Trip manual #${t.id}`}
                                     </p>
                                     <p className="text-xs text-dark-400 mt-0.5">
@@ -58,10 +58,10 @@ export default function DriverTrips() {
                                     </p>
                                     <div className="flex items-center gap-2 mt-1.5">
                                         <StatusBadge status={t.status} />
-                                        <span className="text-xs font-bold font-mono text-primary-600">{formatKm(t.distance_km)}</span>
+                                        <span className="text-xs font-bold font-mono text-success-600">{formatKm(t.distance_km)}</span>
                                     </div>
                                 </div>
-                                <ChevronRight className="w-5 h-5 text-dark-300 flex-shrink-0" />
+                                <ChevronRight className="w-5 h-5 text-dark-300 group-hover:text-success-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                             </button>
                         ))}
                     </div>
@@ -72,7 +72,7 @@ export default function DriverTrips() {
                         <div className="glass-strong rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-display text-lg font-bold text-dark-900">History Perjalanan</h3>
-                                <button onClick={() => setDetailId(null)} className="p-2 rounded-xl glass glass-hover"><X className="w-4 h-4" /></button>
+                                <button onClick={() => setDetailId(null)} className="p-2 rounded-xl glass glass-hover hover:text-success-600"><X className="w-4 h-4" /></button>
                             </div>
                             <TripDetail tripId={detailId} onDeleted={() => { setDetailId(null); loadTrips(); }} />
                         </div>

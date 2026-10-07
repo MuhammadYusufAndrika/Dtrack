@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
-import { Eye, EyeOff, Loader2, Mail, Lock, Truck, Sparkles, User, Phone, FileText } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, Lock, Truck, Sparkles, User, Phone, FileText, ClipboardCheck, AlertTriangle } from 'lucide-react';
 
 export default function Register() {
     const [form, setForm] = useState({ name: '', email: '', phone: '', license_number: '', password: '', password_confirmation: '' });
@@ -48,21 +48,22 @@ export default function Register() {
                 <div className="orb orb-blue w-[420px] h-[420px] -top-32 -left-32" />
                 <div className="orb orb-violet w-[380px] h-[380px] top-1/3 -right-28" />
                 <div className="orb orb-cyan w-[260px] h-[260px] bottom-0 left-1/3" />
+                <div className="orb orb-rose w-[220px] h-[220px] bottom-16 right-1/4" />
             </div>
 
             <div className="relative w-full max-w-md animate-fade-up">
                 <div className="flex flex-col items-center text-center mb-5">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 via-violet-500 to-accent-500 flex items-center justify-center shadow-[0_10px_32px_rgba(59,130,246,0.45)]">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 via-violet-500 to-accent-500 flex items-center justify-center shadow-[0_10px_32px_rgba(59,130,246,0.45)] ring-4 ring-white/60">
                         <Truck className="w-6 h-6 text-white" />
                     </div>
                     <p className="font-display font-bold text-dark-900 mt-2.5 leading-tight">Dtrack</p>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-dark-400">Pendaftaran Sopir</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-gradient">Pendaftaran Sopir</p>
                 </div>
 
                 <div className="glass-strong rounded-3xl p-6 sm:p-8">
                     {done ? (
                         <div className="text-center py-6">
-                            <p className="text-5xl mb-4">📋</p>
+                            <div className="inline-flex w-16 h-16 rounded-2xl bg-success-50 border border-success-100 items-center justify-center mb-4"><ClipboardCheck className="w-8 h-8 text-success-500" /></div>
                             <h1 className="font-display text-xl font-bold text-dark-900">Pendaftaran diterima!</h1>
                             <p className="text-sm text-dark-400 mt-2">Akunmu menunggu persetujuan admin. Kamu akan bisa login setelah disetujui.</p>
                             <button onClick={() => router.visit('/login')} className="btn-glow mt-6 px-6 py-3 rounded-xl text-white text-sm font-bold">Kembali ke Login</button>
@@ -70,14 +71,14 @@ export default function Register() {
                     ) : (
                         <>
                             <div className="mb-6 text-center">
-                                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] px-3 py-1.5 rounded-full bg-success-500/10 border border-success-500/25 text-success-500">
+                                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] px-3 py-1.5 rounded-full bg-success-100 border border-success-200 text-success-700">
                                     <Sparkles className="w-3 h-3" /> Gabung sebagai sopir
                                 </span>
                                 <h1 className="font-display text-2xl font-bold text-dark-900 mt-3">Daftar Akun Sopir</h1>
                                 <p className="text-sm text-dark-400 mt-1.5">Isi data di bawah — admin akan menyetujui akunmu.</p>
                             </div>
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                {error && <div className="p-3.5 rounded-xl bg-danger-500/10 border border-danger-500/30 text-sm text-danger-500">⚠️ {error}</div>}
+                                {error && <div className="p-3.5 rounded-xl bg-danger-50 border border-danger-200 text-sm text-danger-700 flex items-start gap-2"><AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" /> {error}</div>}
                                 <div className="relative">
                                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500 pointer-events-none" />
                                     <input type="text" value={form.name} onChange={(e) => set('name', e.target.value)} required placeholder="Nama lengkap" className={inputCls} />

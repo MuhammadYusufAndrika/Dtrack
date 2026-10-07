@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import {
     Eye, EyeOff, Loader2, Mail, Lock, Truck, Sparkles,
-    ChevronRight, MapPin, ShieldCheck,
+    ChevronRight, MapPin, ShieldCheck, AlertTriangle,
 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
@@ -59,6 +59,8 @@ export default function Login() {
                 <div className="orb orb-blue w-[420px] h-[420px] -top-32 -left-32" />
                 <div className="orb orb-violet w-[380px] h-[380px] top-1/3 -right-28" />
                 <div className="orb orb-cyan w-[260px] h-[260px] bottom-0 left-1/3" />
+                <div className="orb orb-rose w-[240px] h-[240px] top-10 right-1/4" />
+                <div className="orb orb-amber w-[200px] h-[200px] bottom-10 left-0" />
                 <div
                     className="absolute inset-0 opacity-40"
                     style={{ backgroundImage: 'radial-gradient(rgba(148,163,184,0.16) 1px, transparent 1px)', backgroundSize: '26px 26px' }}
@@ -69,16 +71,16 @@ export default function Login() {
             <div className="relative w-full max-w-md animate-fade-up">
                 {/* Logo di atas card */}
                 <div className="flex flex-col items-center text-center mb-5">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 via-violet-500 to-accent-500 flex items-center justify-center shadow-[0_10px_32px_rgba(59,130,246,0.45)]">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 via-violet-500 to-accent-500 flex items-center justify-center shadow-[0_10px_32px_rgba(59,130,246,0.45)] ring-4 ring-white/60">
                         <Truck className="w-6 h-6 text-white" />
                     </div>
                     <p className="font-display font-bold text-dark-900 mt-2.5 leading-tight">Dahana AI</p>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-dark-400">Live Tracking</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-gradient">Live Tracking</p>
                 </div>
 
                 <div className="glass-strong rounded-3xl p-6 sm:p-8">
                     <div className="mb-6 text-center">
-                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/25 text-primary-600">
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] px-3 py-1.5 rounded-full bg-violet-100 border border-violet-200 text-violet-700">
                             <Sparkles className="w-3 h-3" /> Selamat datang kembali
                         </span>
                         <h1 className="font-display text-2xl sm:text-[26px] font-bold text-dark-900 mt-3 leading-tight">
@@ -89,8 +91,8 @@ export default function Login() {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         {error && (
-                            <div className="p-3.5 rounded-xl bg-danger-500/10 border border-danger-500/30 text-sm text-danger-500 flex items-start gap-2">
-                                <span className="mt-0.5 flex-shrink-0">⚠️</span>
+                            <div className="p-3.5 rounded-xl bg-danger-50 border border-danger-200 text-sm text-danger-700 flex items-start gap-2">
+                                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                                 <span className="min-w-0">{error}</span>
                             </div>
                         )}
@@ -173,7 +175,11 @@ export default function Login() {
                                     key={d.label}
                                     type="button"
                                     onClick={() => fillDemo(d.email)}
-                                    className="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-dark-100/70 border border-dark-200/60 text-dark-600 hover:text-primary-600 hover:border-primary-500/40 transition-colors"
+                                    className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border transition-colors ${
+                                        d.label === 'Admin'
+                                            ? 'bg-primary-50 border-primary-200 text-primary-700 hover:bg-primary-100'
+                                            : 'bg-success-50 border-success-200 text-success-700 hover:bg-success-100'
+                                    }`}
                                 >
                                     {d.label}
                                 </button>
@@ -186,18 +192,18 @@ export default function Login() {
 
                     <div className="mt-6">
                         <div className="flex items-center gap-3 mb-4">
-                            <span className="flex-1 h-px bg-dark-200/70" />
+                            <span className="flex-1 h-px bg-gradient-to-r from-transparent via-primary-200 to-primary-200" />
                             <span className="text-[11px] font-bold uppercase tracking-widest text-dark-400">atau</span>
-                            <span className="flex-1 h-px bg-dark-200/70" />
+                            <span className="flex-1 h-px bg-gradient-to-l from-transparent via-accent-200 to-accent-200" />
                         </div>
                         <a
                             href="/track"
-                            className="glass glass-hover w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold text-dark-900"
+                            className="glass glass-hover tint-cyan w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold text-accent-700"
                         >
-                            <MapPin className="w-4 h-4 text-primary-600" /> Lacak kendaraan tanpa login
+                            <MapPin className="w-4 h-4" /> Lacak kendaraan tanpa login
                         </a>
                         <p className="flex items-center justify-center gap-1.5 text-[11px] text-dark-400 mt-4">
-                            <ShieldCheck className="w-3.5 h-3.5" /> Koneksi aman & terenkripsi
+                            <ShieldCheck className="w-3.5 h-3.5 text-success-500" /> Koneksi aman & terenkripsi
                         </p>
                     </div>
                 </div>

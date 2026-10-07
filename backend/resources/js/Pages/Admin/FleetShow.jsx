@@ -33,7 +33,7 @@ function normalizeAiResult(r) {
     };
 }
 
-const vehicleIcon = L.divIcon({ className: '', html: '<div style="width:32px;height:32px;background:#3b82f6;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-size:14px;">🚛</div>', iconSize: [32, 32], iconAnchor: [16, 16] });
+const vehicleIcon = L.divIcon({ className: '', html: '<div class="fv-marker" style="--m:#2563eb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>', iconSize: [32, 32], iconAnchor: [16, 16] });
 
 export default function FleetShow({ id }) {
     const [vehicle, setVehicle] = useState(null);
@@ -127,8 +127,8 @@ export default function FleetShow({ id }) {
     return (
         <AdminLayout>
             <div className="space-y-6">
-                <PageHeader eyebrow="Unit Detail" title={vehicle.plate_number} description={`${vehicle.brand} ${vehicle.model} — status ${vehicle.status}.`} />
-                <div className="h-[400px] rounded-3xl overflow-hidden border border-dark-200/70 shadow-[0_24px_64px_rgba(15,23,42,0.15)]">
+                <PageHeader eyebrow="Unit Detail" title={vehicle.plate_number} description={`${vehicle.brand} ${vehicle.model} — status ${vehicle.status}.`} accent="cyan" />
+                <div className="h-[400px] rounded-3xl overflow-hidden border border-accent-200/70 shadow-[0_24px_64px_rgba(6,182,212,0.16)]">
                     <MapContainer center={center} zoom={15} className="h-full w-full z-0" zoomControl={false}>
                         <MapTiles />
                         {loc && <Marker position={[loc.latitude, loc.longitude]} icon={vehicleIcon}><Popup><div className="text-sm text-dark-900"><p className="font-semibold">{vehicle.plate_number}</p><p>Speed: {loc.speed ?? '—'} km/h</p></div></Popup></Marker>}
@@ -145,11 +145,11 @@ export default function FleetShow({ id }) {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Camera Feed */}
                     <div className="glass rounded-3xl overflow-hidden">
-                        <div className="p-4 border-b border-dark-200/60 flex items-center justify-between">
+                        <div className="p-4 border-b border-accent-100/70 bg-gradient-to-r from-accent-50/60 via-transparent to-primary-50/50 flex items-center justify-between">
                             <h3 className="text-sm font-bold text-dark-900 flex items-center gap-2">
-                                <Camera className="w-4 h-4" /> Live Camera
+                                <Camera className="w-4 h-4 text-accent-600" /> Live Camera
                             </h3>
-                            <button onClick={fetchFrame} className="text-dark-400 hover:text-dark-900 transition-colors">
+                            <button onClick={fetchFrame} className="text-dark-400 hover:text-accent-600 transition-colors">
                                 <RefreshCw className="w-4 h-4" />
                             </button>
                         </div>
@@ -165,12 +165,12 @@ export default function FleetShow({ id }) {
                     </div>
 
                     {/* AI Detection Results */}
-                    <div className="glass rounded-3xl overflow-hidden">
-                        <div className="p-4 border-b border-dark-200/60 flex items-center justify-between">
+                    <div className="glass tint-cyan rounded-3xl overflow-hidden">
+                        <div className="p-4 border-b border-accent-100/70 bg-gradient-to-r from-accent-50/60 via-transparent to-primary-50/50 flex items-center justify-between">
                             <h3 className="text-sm font-bold text-dark-900 flex items-center gap-2">
-                                <AlertTriangle className="w-4 h-4" /> AI Behavior Detection
+                                <AlertTriangle className="w-4 h-4 text-accent-600" /> AI Behavior Detection
                             </h3>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${cameraFrame && aiResult ? 'bg-success-500/15 text-success-500' : 'bg-dark-100 text-dark-500'}`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${cameraFrame && aiResult ? 'bg-success-100 text-success-700 border-success-200' : 'bg-dark-100 text-dark-500 border-dark-200'}`}>
                                 {cameraFrame && aiResult ? 'Active' : 'No Data'}
                             </span>
                         </div>
@@ -213,9 +213,9 @@ function InfoBox({ label, value }) {
 
 function AiIndicator({ icon: Icon, label, active, danger }) {
     return (
-        <div className={`flex items-center gap-2 p-2.5 rounded-lg border transition-colors ${danger ? 'bg-danger-500/10 border-danger-500/30' : active ? 'bg-success-500/10 border-success-500/30' : 'bg-dark-100/60 border-dark-200/60'}`}>
-            <Icon className={`w-4 h-4 ${danger ? 'text-danger-500' : active ? 'text-success-500' : 'text-dark-400'}`} />
-            <span className={`text-xs font-medium ${danger ? 'text-danger-500' : active ? 'text-success-500' : 'text-dark-400'}`}>{label}</span>
+        <div className={`flex items-center gap-2 p-2.5 rounded-lg border transition-colors ${danger ? 'bg-danger-100 border-danger-200' : active ? 'bg-success-100 border-success-200' : 'bg-dark-100/60 border-dark-200/60'}`}>
+            <Icon className={`w-4 h-4 ${danger ? 'text-danger-600' : active ? 'text-success-600' : 'text-dark-400'}`} />
+            <span className={`text-xs font-medium ${danger ? 'text-danger-700' : active ? 'text-success-700' : 'text-dark-400'}`}>{label}</span>
         </div>
     );
 }

@@ -55,33 +55,33 @@ export default function DriverLayout({ children }) {
             </button>
             {mobileOpen && <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />}
 
-            <aside className={`fixed top-0 left-0 z-50 h-screen glass-strong !rounded-none border-y-0 border-l-0 transition-all duration-300 flex flex-col ${collapsed ? 'w-[76px]' : 'w-[264px]'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-                <div className="flex items-center justify-between p-4 border-b border-dark-200/60">
+            <aside className={`fixed top-0 left-0 z-50 h-screen glass-strong tint-emerald !rounded-none border-y-0 border-l-0 transition-all duration-300 flex flex-col ${collapsed ? 'w-[76px]' : 'w-[264px]'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+                <div className="flex items-center justify-between p-4 border-b border-success-100/80">
                     <Link href="/driver" className="flex items-center gap-3 min-w-0">
                         <div className="relative flex-shrink-0">
-                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-success-500 via-accent-500 to-primary-600 flex items-center justify-center shadow-[0_8px_28px_rgba(34,197,94,0.4)]">
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-success-500 via-accent-500 to-primary-600 flex items-center justify-center shadow-[0_8px_28px_rgba(34,197,94,0.45)]">
                                 <Navigation className="w-5 h-5 text-white" />
                             </div>
-                            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-success-400 border-2 border-dark-900 animate-pulse-ring" />
+                            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-success-400 border-2 border-white animate-pulse-ring" />
                         </div>
                         {!collapsed && (
                             <div className="min-w-0">
                                 <h1 className="font-display text-[15px] font-bold text-dark-900 truncate leading-tight">FleetVision</h1>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gradient">Driver App</p>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gradient-green">Driver App</p>
                             </div>
                         )}
                     </Link>
-                    <button onClick={() => setCollapsed(!collapsed)} className="hidden lg:flex p-1.5 rounded-lg text-dark-400 hover:text-dark-900 hover:bg-dark-100 transition-colors">
+                    <button onClick={() => setCollapsed(!collapsed)} className="hidden lg:flex p-1.5 rounded-lg text-dark-400 hover:text-success-600 hover:bg-white/70 transition-colors">
                         <ChevronLeft className={`w-4 h-4 transition-transform duration-300 ${collapsed && 'rotate-180'}`} />
                     </button>
                 </div>
 
                 {!collapsed && (
-                    <div className="mx-3 mt-3 px-3 py-2.5 rounded-xl bg-gradient-to-r from-success-500/15 to-accent-500/10 border border-success-500/20 flex items-center gap-2.5">
-                        <span className="w-2 h-2 rounded-full bg-success-400 animate-pulse flex-shrink-0" />
+                    <div className="mx-3 mt-3 px-3 py-2.5 rounded-xl bg-success-50/90 border border-success-200 flex items-center gap-2.5">
+                        <span className="w-2 h-2 rounded-full bg-success-500 animate-pulse flex-shrink-0" />
                         <div className="min-w-0">
-                            <p className="text-[11px] font-semibold text-success-500">Siap jalan</p>
-                            <p className="text-[10px] text-dark-400">GPS + kamera AI standby</p>
+                            <p className="text-[11px] font-bold text-success-700">Siap jalan</p>
+                            <p className="text-[10px] text-success-600/80">GPS + kamera AI standby</p>
                         </div>
                     </div>
                 )}
@@ -93,9 +93,9 @@ export default function DriverLayout({ children }) {
                         const active = isActive(item.href);
                         return (
                             <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative overflow-hidden ${active ? 'text-white shadow-[0_8px_24px_rgba(34,197,94,0.35)]' : 'text-dark-400 hover:text-dark-900 hover:bg-dark-100/70'}`}>
-                                {active && <span className="absolute inset-0 bg-gradient-to-r from-success-500 to-accent-500 opacity-90" />}
-                                {active && <span className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/10 to-white/10" />}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative overflow-hidden ${active ? 'text-white shadow-[0_8px_24px_rgba(34,197,94,0.4)]' : 'text-dark-400 hover:text-success-700 hover:bg-white/80'}`}>
+                                {active && <span className="absolute inset-0 bg-gradient-to-r from-success-600 via-accent-500 to-primary-500 opacity-95" />}
+                                {active && <span className="absolute inset-0 bg-gradient-to-t from-white/0 via-white/10 to-white/15" />}
                                 <Icon className="w-[18px] h-[18px] flex-shrink-0 relative" />
                                 {!collapsed && <span className="relative">{item.label}</span>}
                                 {active && !collapsed && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white relative" />}
@@ -104,8 +104,8 @@ export default function DriverLayout({ children }) {
                     })}
                 </nav>
 
-                <div className="p-3 border-t border-dark-200/60">
-                    <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-dark-400 hover:text-dark-900 hover:bg-dark-100/70 transition-all w-full">
+                <div className="p-3 border-t border-success-100/80">
+                    <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-dark-400 hover:text-danger-600 hover:bg-danger-50 transition-all w-full">
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-success-500 to-accent-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">D</div>
                         {!collapsed && <div className="min-w-0 text-left flex-1"><p className="text-sm font-semibold text-dark-900 truncate">Driver</p><p className="text-[11px] text-dark-500 flex items-center gap-1"><LogOut className="w-3 h-3" /> Keluar</p></div>}
                     </button>
@@ -116,17 +116,17 @@ export default function DriverLayout({ children }) {
                 <header className="sticky top-0 z-30 glass !rounded-none border-x-0 border-t-0">
                     <div className="flex items-center gap-3 px-4 lg:px-7 py-3.5 pl-14 lg:pl-7">
                         <div className="min-w-0">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-dark-500">Driver</p>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-success-600">Driver</p>
                             <h2 className="font-display text-sm font-bold text-dark-900 truncate">{activeLabel}</h2>
                         </div>
-                        <div className="hidden md:flex items-center gap-2 ml-6 px-3 py-2 rounded-xl bg-dark-100/60 border border-dark-200/60 text-dark-400 text-xs flex-1 max-w-xs">
-                            <Search className="w-3.5 h-3.5" />
+                        <div className="hidden md:flex items-center gap-2 ml-6 px-3 py-2 rounded-xl bg-white/70 border border-dark-200/70 text-dark-400 text-xs flex-1 max-w-xs hover:border-success-500/40 transition-colors">
+                            <Search className="w-3.5 h-3.5 text-success-500" />
                             <span className="truncate">Cari trip, alert…</span>
                         </div>
                         <div className="ml-auto flex items-center gap-2.5">
                             <span className="hidden sm:block text-xs text-dark-400 tabular-nums">{clock} WIB</span>
-                            <span className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-full bg-success-500/10 border border-success-500/30 text-success-500">
-                                <span className="w-1.5 h-1.5 rounded-full bg-success-400 animate-pulse" /> Online
+                            <span className="flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-full bg-success-100 border border-success-200 text-success-700">
+                                <span className="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse" /> Online
                             </span>
                         </div>
                     </div>

@@ -10,7 +10,7 @@ import StatusBadge from '../../Components/StatusBadge';
 import TripDetail from '../../Components/TripDetail';
 import PageHeader from '../../Components/PageHeader';
 import { PageLoader } from '../../Components/LoadingSpinner';
-import { Route, Truck, User, MapPin, Plus, X, Navigation, Search, Loader2, Crosshair, Eye } from 'lucide-react';
+import { Route, Truck, User, MapPin, Plus, X, Navigation, Search, Loader2, Crosshair, Eye, Flag, AlertTriangle } from 'lucide-react';
 
 const emptyForm = {
     vehicle_id: '', driver_id: '', origin: '', destination: '',
@@ -18,8 +18,8 @@ const emptyForm = {
     planned_distance_km: '',
 };
 
-const originIcon = L.divIcon({ className: '', html: '<div style="width:34px;height:34px;background:linear-gradient(135deg,#22c55e,#06b6d4);border:3px solid #fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;">📍</div>', iconSize: [34, 34], iconAnchor: [17, 17] });
-const destIcon = L.divIcon({ className: '', html: '<div style="width:34px;height:34px;background:linear-gradient(135deg,#f59e0b,#ef4444);border:3px solid #fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;">🎯</div>', iconSize: [34, 34], iconAnchor: [17, 17] });
+const originIcon = L.divIcon({ className: '', html: '<div class="fv-marker" style="--m:#16a34a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></div>', iconSize: [34, 34], iconAnchor: [17, 17] });
+const destIcon = L.divIcon({ className: '', html: '<div class="fv-marker" style="--m:#d97706"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg></div>', iconSize: [34, 34], iconAnchor: [17, 17] });
 
 // Terima koma ala Indonesia ("-6,2088") -> "-6.2088"
 const parseCoord = (v) => {
@@ -261,7 +261,7 @@ export default function Trips() {
     const columns = [
         { key: 'id', header: 'Trip', render: (t) => (
             <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary-500/10 flex items-center justify-center"><Route className="w-4 h-4 text-primary-400" /></div>
+                <div className="w-9 h-9 rounded-xl bg-success-100 border border-success-200 flex items-center justify-center"><Route className="w-4 h-4 text-success-600" /></div>
                 <div><p className="font-medium text-dark-900">Trip #{t.id}</p><p className="text-xs text-dark-400">{t.start_time ? new Date(t.start_time).toLocaleDateString() : ''}</p></div>
             </div>
         )},
@@ -276,13 +276,13 @@ export default function Trips() {
         { key: 'distance_km', header: 'Jarak', render: (t) => <div className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-dark-400" /><span className="text-sm text-dark-700">{formatKm(t.distance_km)}</span></div>, sortable: true },
         { key: 'status', header: 'Status', render: (t) => <StatusBadge status={t.status} />, sortable: true },
         { key: 'end_time', header: 'Duration', render: (t) => {
-            if (!t.end_time) return <span className="text-sm text-success-500 font-semibold">In progress</span>;
+            if (!t.end_time) return <span className="text-sm text-success-600 font-semibold">In progress</span>;
             const mins = Math.round((new Date(t.end_time) - new Date(t.start_time)) / 60000);
             return <span className="text-sm text-dark-700">{Math.floor(mins / 60)}h {mins % 60}m</span>;
         }},
         { key: 'aksi', header: 'Aksi', render: (t) => (
             <button onClick={() => openDetail(t.id)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl glass glass-hover text-dark-900">
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl glass glass-hover text-success-600 hover:bg-success-50">
                 <Eye className="w-3.5 h-3.5" /> History
             </button>
         )},
@@ -295,16 +295,17 @@ export default function Trips() {
                     eyebrow="Operations"
                     title="Riwayat Trip"
                     description={`${trips.length} perjalanan tercatat.`}
+                    accent="green"
                     action={
                     <div className="flex items-center gap-2">
                         <button onClick={() => { setShowForm(true); setFormError(''); setSearchResults([]); }}
                             className="btn-glow flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-bold">
                             <Plus className="w-4 h-4" /> Buat Trip
                         </button>
-                        <div className="flex rounded-xl border border-dark-200/60 overflow-hidden glass">
+                        <div className="flex rounded-xl border !border-success-200/70 overflow-hidden glass">
                             {['all', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].map((s) => (
                                 <button key={s} onClick={() => setFilter(s)}
-                                    className={`px-3 py-2 text-xs font-bold transition-all ${filter === s ? 'btn-glow text-white' : 'text-dark-400 hover:text-dark-900'}`}>
+                                    className={`px-3 py-2 text-xs font-bold transition-all ${filter === s ? 'btn-glow text-white' : 'text-dark-400 hover:text-success-600'}`}>
                                     {s === 'all' ? 'Semua' : s === 'IN_PROGRESS' ? 'Aktif' : s === 'PLANNED' ? 'Terjadwal' : s.charAt(0) + s.slice(1).toLowerCase()}
                                 </button>
                             ))}
@@ -321,7 +322,7 @@ export default function Trips() {
                                 <h3 className="font-display text-lg font-bold text-dark-900">Buat Trip + Rute</h3>
                                 <button onClick={() => setShowForm(false)} className="p-2 rounded-xl glass glass-hover"><X className="w-4 h-4" /></button>
                             </div>
-                            {formError && <div className="p-3 rounded-xl bg-danger-500/10 border border-danger-500/30 text-sm text-danger-500 mb-4">⚠️ {formError}</div>}
+                            {formError && <div className="p-3 rounded-xl bg-danger-100 border border-danger-200 text-sm text-danger-700 mb-4 flex items-start gap-2"><AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" /> {formError}</div>}
                             <form onSubmit={handleCreate} className="space-y-4">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
@@ -356,11 +357,11 @@ export default function Trips() {
                                         Cari lokasi <span className="normal-case font-normal">(ketik nama kota/alamat, lalu klik hasil)</span>
                                     </label>
                                     <div className="flex gap-2">
-                                        <div className="flex rounded-xl border border-dark-200/60 overflow-hidden glass">
-                                            {[{ v: 'origin', l: '📍 Awal' }, { v: 'dest', l: '🎯 Tujuan' }].map((o) => (
+                                        <div className="flex rounded-xl border !border-success-200/70 overflow-hidden glass">
+                                            {[{ v: 'origin', l: 'Awal', Icon: MapPin }, { v: 'dest', l: 'Tujuan', Icon: Flag }].map((o) => (
                                                 <button type="button" key={o.v} onClick={() => setPickTarget(o.v)}
-                                                    className={`px-3 py-2.5 text-xs font-bold transition-all ${pickTarget === o.v ? 'btn-glow text-white' : 'text-dark-400'}`}>
-                                                    {o.l}
+                                                    className={`px-3 py-2.5 text-xs font-bold transition-all flex items-center gap-1.5 ${pickTarget === o.v ? 'btn-glow text-white' : 'text-dark-400 hover:text-success-600'}`}>
+                                                    <o.Icon className="w-3.5 h-3.5" /> {o.l}
                                                 </button>
                                             ))}
                                         </div>
@@ -376,13 +377,13 @@ export default function Trips() {
                                         </button>
                                     </div>
                                     {searchResults.length > 0 && (
-                                        <div className="mt-2 rounded-xl border border-dark-200/60 overflow-hidden max-h-44 overflow-y-auto">
+                                        <div className="mt-2 rounded-xl border border-success-200/70 overflow-hidden max-h-44 overflow-y-auto">
                                             {searchResults.map((r, i) => (
                                                 <button type="button" key={`${r.place_id}-${i}`} onClick={() => pickSearchResult(r)}
-                                                    className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-primary-500/10 transition-colors border-b border-dark-200/40 last:border-0">
+                                                    className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-success-50 transition-colors border-b border-success-100 last:border-0">
                                                     <p className="font-semibold text-dark-900 truncate">
                                                         {String(r.display_name).split(',').slice(0, 3).join(',')}
-                                                        {r._source && <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wider text-dark-400 border border-dark-200/60 rounded px-1">{r._source}</span>}
+                                                        {r._source && <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wider text-success-700 bg-success-50 border border-success-200 rounded px-1">{r._source}</span>}
                                                     </p>
                                                     <p className="font-mono text-dark-400">{Number(r.lat).toFixed(5)}, {Number(r.lon).toFixed(5)}</p>
                                                 </button>
@@ -391,11 +392,11 @@ export default function Trips() {
                                     )}
                                     <p className="text-[11px] text-dark-400 mt-1.5 flex items-center gap-1">
                                         <Crosshair className="w-3 h-3" />
-                                        Atau <strong>klik langsung di peta</strong> — titik {pickTarget === 'origin' ? 'awal 📍' : 'tujuan 🎯'} yang akan terisi.
+                                        Atau <strong>klik langsung di peta</strong> — titik {pickTarget === 'origin' ? 'awal' : 'tujuan'} yang akan terisi.
                                     </p>
                                 </div>
 
-                                <div className="rounded-2xl overflow-hidden border border-dark-200/60">
+                                <div className="rounded-2xl overflow-hidden border border-success-200/70">
                                     <div className="h-[280px]">
                                         <MapContainer center={[-2.5489, 118.0149]} zoom={5} className="h-full w-full z-0">
                                             <MapTiles />
@@ -403,12 +404,12 @@ export default function Trips() {
                                             <FlyTo target={mapFocus} />
                                             {oLat != null && oLng != null && (
                                                 <Marker position={[oLat, oLng]} icon={originIcon}>
-                                                    <Popup><div className="text-sm"><p className="font-bold">📍 {form.origin || 'Titik awal'}</p></div></Popup>
+                                                    <Popup><div className="text-sm"><p className="font-bold">{form.origin || 'Titik awal'}</p></div></Popup>
                                                 </Marker>
                                             )}
                                             {dLat != null && dLng != null && (
                                                 <Marker position={[dLat, dLng]} icon={destIcon}>
-                                                    <Popup><div className="text-sm"><p className="font-bold">🎯 {form.destination || 'Tujuan'}</p></div></Popup>
+                                                    <Popup><div className="text-sm"><p className="font-bold">{form.destination || 'Tujuan'}</p></div></Popup>
                                                 </Marker>
                                             )}
                                             {previewLine.length === 2 && <Polyline positions={previewLine} pathOptions={{ color: '#2563eb', weight: 3, opacity: 0.8, dashArray: '8 6' }} />}
@@ -449,8 +450,8 @@ export default function Trips() {
                     </div>
                 )}
 
-                <div ref={detailRef} className="glass rounded-3xl p-5 sm:p-6 scroll-mt-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <div ref={detailRef} className="glass tint-emerald rounded-3xl p-5 sm:p-6 scroll-mt-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-success-100/70 bg-gradient-to-r from-success-50/70 via-transparent to-accent-50/50">
                         <h3 className="font-display text-base sm:text-lg font-bold text-dark-900">
                             History Perjalanan{detailId ? ` — Trip #${detailId}` : ''}
                         </h3>

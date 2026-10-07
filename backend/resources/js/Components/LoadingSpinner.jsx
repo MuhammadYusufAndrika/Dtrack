@@ -1,16 +1,16 @@
+import { Truck } from 'lucide-react';
+
 export function PageLoader({ label = 'Memuat...' }) {
     return (
-        <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-            <div className="relative">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 via-violet-500 to-accent-500 flex items-center justify-center text-2xl animate-float shadow-[0_0_40px_rgba(59,130,246,0.5)]">
-                    🚛
+        <div className="flex flex-col items-center justify-center h-[60vh] gap-5">
+            <div className="relative w-16 h-16">
+                <div className="absolute inset-0 rounded-full border-2 border-primary-100" />
+                <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary-500 border-r-primary-400 animate-spin" style={{ animationDuration: '1.1s' }} />
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <Truck className="w-6 h-6 text-primary-600" />
                 </div>
-                <div className="absolute -inset-2 rounded-3xl border border-primary-500/30 animate-ping opacity-30" />
             </div>
-            <div className="flex items-center gap-2 text-sm text-dark-400">
-                <span className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                {label}
-            </div>
+            <p className="text-sm text-dark-400">{label}</p>
         </div>
     );
 }

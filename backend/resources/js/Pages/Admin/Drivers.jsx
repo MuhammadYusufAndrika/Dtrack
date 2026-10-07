@@ -6,7 +6,7 @@ import DataTable from '../../Components/DataTable';
 import StatusBadge from '../../Components/StatusBadge';
 import PageHeader from '../../Components/PageHeader';
 import { PageLoader } from '../../Components/LoadingSpinner';
-import { User, Truck, Phone, Plus, X, Check, Trash2 } from 'lucide-react';
+import { User, Truck, Phone, Plus, X, Check, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const emptyForm = { name: '', email: '', phone: '', license_number: '', password: '' };
 
@@ -96,9 +96,9 @@ export default function Drivers() {
 
     const columns = [
         { key: 'name', header: 'Driver', render: (d) => (
-            <Link href={`/admin/drivers/${d.id}`} className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary-500/10 flex items-center justify-center"><User className="w-4 h-4 text-primary-600" /></div>
-                <div><p className="font-medium text-dark-900">{d.name}</p><p className="text-xs text-dark-400">{d.email}</p></div>
+            <Link href={`/admin/drivers/${d.id}`} className="group flex items-center gap-3 transition-colors">
+                <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center"><User className="w-4 h-4 text-violet-600" /></div>
+                <div><p className="font-medium text-dark-900 group-hover:text-violet-700 transition-colors">{d.name}</p><p className="text-xs text-dark-400">{d.email}</p></div>
             </Link>
         )},
         { key: 'phone', header: 'Phone', render: (d) => (
@@ -112,7 +112,7 @@ export default function Drivers() {
         )},
         { key: 'aksi', header: 'Aksi', render: (d) => (
             <button onClick={() => handleDelete(d.id, d.name)} title="Hapus driver + akun loginnya"
-                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl glass glass-hover text-danger-500">
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl glass glass-hover hover:!border-danger-500/40 text-danger-500 hover:text-danger-600">
                 <Trash2 className="w-3.5 h-3.5" /> Hapus
             </button>
         )},
@@ -124,34 +124,35 @@ export default function Drivers() {
         <AdminLayout>
             <div className="space-y-6">
                 <PageHeader eyebrow="Team" title="Driver" description={`${drivers.length} driver terdaftar${pending.length ? ` · ${pending.length} menunggu persetujuan` : ''}.`}
+                    accent="violet"
                     action={
                     <div className="flex items-center gap-2">
                         <button onClick={() => { setShowForm(true); setFormError(''); }}
                             className="btn-glow flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-bold">
                             <Plus className="w-4 h-4" /> Tambah Driver
                         </button>
-                        <div className="flex rounded-xl border border-dark-200/60 overflow-hidden glass">
+                        <div className="flex rounded-xl border border-violet-200/70 overflow-hidden glass">
                             {[['all', 'Semua'], ['pending', `Menunggu${pending.length ? ` (${pending.length})` : ''}`]].map(([v, l]) => (
                                 <button key={v} onClick={() => setTab(v)}
-                                    className={`px-3.5 py-2 text-xs font-bold transition-all ${tab === v ? 'btn-glow text-white' : 'text-dark-400 hover:text-dark-900'}`}>{l}</button>
+                                    className={`px-3.5 py-2 text-xs font-bold transition-all ${tab === v ? 'btn-glow text-white' : 'text-dark-400 hover:text-violet-600'}`}>{l}</button>
                             ))}
                         </div>
                     </div>
                     } />
-                {notice && <div className="glass rounded-2xl !border-success-500/30 p-3.5 text-sm text-success-500 animate-fade-up">✅ {notice}</div>}
+                {notice && <div className="glass rounded-2xl !border-success-200 bg-success-100/60 p-3.5 text-sm text-success-700 font-medium animate-fade-up flex items-center gap-2"><CheckCircle2 className="w-4 h-4 flex-shrink-0" /> {notice}</div>}
                 {tab === 'pending' ? (
                     <div className="space-y-3">
-                        {pending.length === 0 && <div className="glass rounded-2xl p-8 text-center text-sm text-dark-400">Tidak ada pendaftar menunggu persetujuan.</div>}
+                        {pending.length === 0 && <div className="glass tint-violet rounded-2xl p-8 text-center text-sm text-dark-400">Tidak ada pendaftar menunggu persetujuan.</div>}
                         {pending.map((d) => (
                             <div key={d.id} className="glass rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                                <div className="w-11 h-11 rounded-2xl bg-violet-500/10 flex items-center justify-center flex-shrink-0"><User className="w-5 h-5 text-violet-500" /></div>
+                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500 to-primary-500 flex items-center justify-center flex-shrink-0 shadow-[0_8px_24px_rgba(124,58,237,0.35)]"><User className="w-5 h-5 text-white" /></div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-sm font-bold text-dark-900">{d.name}</p>
                                     <p className="text-xs text-dark-400">{d.email} · {d.phone} · SIM {d.license_number}</p>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                    <button onClick={() => handleApprove(d.id)} className="btn-glow flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-bold"><Check className="w-4 h-4" /> Setujui</button>
-                                    <button onClick={() => handleDelete(d.id, d.name)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl glass glass-hover text-xs font-bold text-danger-500"><Trash2 className="w-4 h-4" /> Tolak</button>
+                                    <button onClick={() => handleApprove(d.id)} className="btn-glow-green flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-bold"><Check className="w-4 h-4" /> Setujui</button>
+                                    <button onClick={() => handleDelete(d.id, d.name)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl glass glass-hover hover:!border-danger-500/40 text-xs font-bold text-danger-500 hover:text-danger-600"><Trash2 className="w-4 h-4" /> Tolak</button>
                                 </div>
                             </div>
                         ))}
@@ -162,12 +163,12 @@ export default function Drivers() {
 
                 {showForm && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowForm(false)}>
-                        <div className="glass-strong rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="glass-strong tint-violet rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-display text-lg font-bold text-dark-900">Tambah Driver</h3>
-                                <button onClick={() => setShowForm(false)} className="p-2 rounded-xl glass glass-hover"><X className="w-4 h-4" /></button>
+                                <button onClick={() => setShowForm(false)} className="p-2 rounded-xl glass glass-hover hover:text-violet-600 hover:!border-violet-500/40"><X className="w-4 h-4" /></button>
                             </div>
-                            {formError && <div className="p-3 rounded-xl bg-danger-500/10 border border-danger-500/30 text-sm text-danger-500 mb-4">⚠️ {formError}</div>}
+                            {formError && <div className="p-3 rounded-xl bg-danger-100 border border-danger-200 text-sm text-danger-700 mb-4 flex items-start gap-2"><AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" /> {formError}</div>}
                             <form onSubmit={handleCreate} className="space-y-3.5">
                                 <div>
                                     <label className="block text-xs font-semibold uppercase tracking-wider text-dark-400 mb-1.5">Nama</label>

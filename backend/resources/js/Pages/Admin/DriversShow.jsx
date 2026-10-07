@@ -209,6 +209,7 @@ export default function DriversShow({ id }) {
                     eyebrow="Driver Detail"
                     title={driver.name}
                     description={`${driver.email} — ${driver.vehicle?.plate_number || 'belum ada unit'}.`}
+                    accent="violet"
                     action={<StatusBadge status={driver.status} />}
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -221,10 +222,10 @@ export default function DriversShow({ id }) {
                 {/* Vehicle Assignment Panel */}
                 <div className="glass rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-3">
-                        <Link2 className="w-4 h-4 text-primary-600" />
+                        <Link2 className="w-4 h-4 text-violet-600" />
                         <h3 className="text-sm font-bold text-dark-900">Vehicle Assignment</h3>
                         {driver.vehicle && (
-                            <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-success-500/15 text-success-500">
+                            <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-success-100 text-success-700 border border-success-200">
                                 Assigned: {driver.vehicle.plate_number}
                             </span>
                         )}
@@ -239,7 +240,7 @@ export default function DriversShow({ id }) {
                             id="vehicle-assign-select"
                             value={selectedVehicleId}
                             onChange={(e) => setSelectedVehicleId(e.target.value)}
-                            className="flex-1 min-w-[180px] rounded-xl bg-white border border-dark-200 text-dark-900 text-sm px-3 py-2 focus:outline-none focus:border-primary-500"
+                            className="flex-1 min-w-[180px] rounded-xl bg-white border border-violet-200/70 text-dark-900 text-sm px-3 py-2 focus:outline-none focus:border-violet-500"
                         >
                             <option value="">— Select a vehicle —</option>
                             {vehicles.map((v) => (
@@ -258,7 +259,7 @@ export default function DriversShow({ id }) {
                             id="btn-assign-vehicle"
                             onClick={() => handleAssign(selectedVehicleId ? Number(selectedVehicleId) : null)}
                             disabled={assigning || !selectedVehicleId}
-                            className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 disabled:opacity-40 text-white text-sm font-medium transition-colors flex items-center gap-2"
+                            className="btn-glow px-4 py-2 rounded-xl disabled:opacity-40 text-white text-sm font-bold flex items-center gap-2"
                         >
                             <Link2 className="w-3.5 h-3.5" />
                             {assigning ? 'Saving...' : 'Assign'}
@@ -269,7 +270,7 @@ export default function DriversShow({ id }) {
                                 id="btn-unassign-vehicle"
                                 onClick={() => handleAssign(null)}
                                 disabled={assigning}
-                                className="px-4 py-2 rounded-xl bg-dark-100 hover:bg-dark-200 disabled:opacity-40 text-dark-600 hover:text-dark-900 text-sm font-semibold transition-colors flex items-center gap-2"
+                                className="glass glass-hover px-4 py-2.5 rounded-xl disabled:opacity-40 text-violet-600 hover:text-violet-700 text-sm font-semibold flex items-center gap-2"
                             >
                                 <Link2Off className="w-3.5 h-3.5" />
                                 Unassign
@@ -279,13 +280,13 @@ export default function DriversShow({ id }) {
                 </div>
 
                 {/* Danger Zone */}
-                <div className="glass rounded-2xl p-4 !border-danger-500/20 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="glass tint-rose rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-dark-900">Hapus driver ini</p>
                         <p className="text-xs text-dark-400">Akun login, trip, chat, dan status ikut terhapus. Kendaraan dilepas.</p>
                     </div>
                     <button onClick={handleDelete} disabled={deleting}
-                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-danger-500/10 border border-danger-500/30 text-danger-500 text-xs font-bold hover:bg-danger-500 hover:text-white transition-colors disabled:opacity-50 flex-shrink-0">
+                        className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-danger-100 border border-danger-200 text-danger-700 text-xs font-bold hover:bg-danger-500 hover:border-danger-500 hover:text-white transition-colors disabled:opacity-50 flex-shrink-0">
                         <Trash2 className="w-4 h-4" /> {deleting ? 'Menghapus…' : 'Hapus Driver'}
                     </button>
                 </div>
@@ -294,11 +295,11 @@ export default function DriversShow({ id }) {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Camera Feed */}
                     <div className="glass rounded-3xl overflow-hidden">
-                        <div className="p-4 border-b border-dark-200/60 flex items-center justify-between">
+                        <div className="p-4 border-b border-violet-100/70 bg-gradient-to-r from-violet-50/60 via-transparent to-primary-50/50 flex items-center justify-between">
                             <h3 className="text-sm font-bold text-dark-900 flex items-center gap-2">
-                                <Camera className="w-4 h-4" /> Live Camera
+                                <Camera className="w-4 h-4 text-violet-600" /> Live Camera
                             </h3>
-                            <button onClick={fetchFrame} className="text-dark-400 hover:text-dark-900 transition-colors">
+                            <button onClick={fetchFrame} className="text-dark-400 hover:text-violet-600 transition-colors">
                                 <RefreshCw className="w-4 h-4" />
                             </button>
                         </div>
@@ -319,12 +320,12 @@ export default function DriversShow({ id }) {
                     </div>
 
                     {/* AI Detection Results */}
-                    <div className="glass rounded-3xl overflow-hidden">
-                        <div className="p-4 border-b border-dark-200/60 flex items-center justify-between">
+                    <div className="glass tint-violet rounded-3xl overflow-hidden">
+                        <div className="p-4 border-b border-violet-100/70 bg-gradient-to-r from-violet-50/60 via-transparent to-primary-50/50 flex items-center justify-between">
                             <h3 className="text-sm font-bold text-dark-900 flex items-center gap-2">
-                                <AlertTriangle className="w-4 h-4" /> AI Behavior Detection
+                                <AlertTriangle className="w-4 h-4 text-violet-600" /> AI Behavior Detection
                             </h3>
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${aiResult ? 'bg-success-500/15 text-success-500' : 'bg-dark-100 text-dark-500'}`}>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${aiResult ? 'bg-success-100 text-success-700 border-success-200' : 'bg-dark-100 text-dark-500 border-dark-200'}`}>
                                 {aiResult ? 'Live' : 'No Data'}
                             </span>
                         </div>
@@ -366,7 +367,7 @@ export default function DriversShow({ id }) {
 function InfoBox({ icon: Icon, label, value }) {
     return (
         <div className="glass rounded-2xl p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center"><Icon className="w-5 h-5 text-primary-600" /></div>
+            <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center"><Icon className="w-5 h-5 text-violet-600" /></div>
             <div><p className="text-xs text-dark-400">{label}</p><p className="text-sm font-semibold text-dark-900">{value}</p></div>
         </div>
     );
@@ -374,9 +375,9 @@ function InfoBox({ icon: Icon, label, value }) {
 
 function AiIndicator({ icon: Icon, label, active, danger }) {
     return (
-        <div className={`flex items-center gap-2 p-2.5 rounded-lg border transition-colors ${danger ? 'bg-danger-500/10 border-danger-500/30' : active ? 'bg-success-500/10 border-success-500/30' : 'bg-dark-100/60 border-dark-200/60'}`}>
-            <Icon className={`w-4 h-4 ${danger ? 'text-danger-500' : active ? 'text-success-500' : 'text-dark-400'}`} />
-            <span className={`text-xs font-medium ${danger ? 'text-danger-500' : active ? 'text-success-500' : 'text-dark-400'}`}>{label}</span>
+        <div className={`flex items-center gap-2 p-2.5 rounded-lg border transition-colors ${danger ? 'bg-danger-100 border-danger-200' : active ? 'bg-success-100 border-success-200' : 'bg-dark-100/60 border-dark-200/60'}`}>
+            <Icon className={`w-4 h-4 ${danger ? 'text-danger-600' : active ? 'text-success-600' : 'text-dark-400'}`} />
+            <span className={`text-xs font-medium ${danger ? 'text-danger-700' : active ? 'text-success-700' : 'text-dark-400'}`}>{label}</span>
         </div>
     );
 }

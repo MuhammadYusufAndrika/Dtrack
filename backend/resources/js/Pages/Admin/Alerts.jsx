@@ -27,12 +27,12 @@ export default function Alerts() {
         } catch {}
     };
 
-    const severityColor = (s) => s === 'CRITICAL' ? 'text-danger-500' : s === 'HIGH' ? 'text-warning-500' : 'text-primary-600';
+    const severityColor = (s) => s === 'CRITICAL' ? 'bg-danger-100 border-danger-200 text-danger-600' : s === 'HIGH' ? 'bg-warning-100 border-warning-200 text-warning-600' : 'bg-primary-100 border-primary-200 text-primary-600';
 
     const columns = [
         { key: 'message', header: 'Alert', render: (a) => (
             <div className="flex items-start gap-3">
-                <AlertTriangle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${severityColor(a.severity)}`} />
+                <AlertTriangle className={`w-8 h-8 p-1.5 mt-0.5 rounded-lg border flex-shrink-0 ${severityColor(a.severity)}`} />
                 <div className="min-w-0">
                     <p className="text-sm text-dark-700">{a.message}</p>
                     <p className="text-xs text-dark-400 mt-0.5">{a.created_at ? new Date(a.created_at).toLocaleString() : ''}</p>
@@ -41,7 +41,7 @@ export default function Alerts() {
         )},
         { key: 'vehicle', header: 'Vehicle', render: (a) => a.vehicle ? <div className="flex items-center gap-2"><Truck className="w-3.5 h-3.5 text-dark-400" /><span className="text-sm text-dark-700">{a.vehicle.plate_number}</span></div> : <span className="text-sm text-dark-500">—</span> },
         { key: 'severity', header: 'Severity', render: (a) => <StatusBadge status={a.severity} />, sortable: true },
-        { key: 'is_read', header: '', render: (a) => !a.is_read && <button onClick={() => markRead(a.id)} className="text-xs font-semibold text-primary-600 hover:text-primary-500">Mark Read</button> },
+        { key: 'is_read', header: '', render: (a) => !a.is_read && <button onClick={() => markRead(a.id)} className="text-xs font-bold px-2.5 py-1 rounded-full bg-warning-100 border border-warning-200 text-warning-700 hover:bg-warning-200 hover:border-warning-300 transition-colors">Mark Read</button> },
     ];
 
     return (
@@ -51,6 +51,7 @@ export default function Alerts() {
                     eyebrow="Safety"
                     title="Alert & Peringatan"
                     description={`${alerts.length} alert — ${alerts.filter((a) => !a.is_read).length} belum dibaca.`}
+                    accent="amber"
                 />
                 <DataTable columns={columns} data={alerts} keyExtractor={(a) => a.id} searchable searchKeys={['message']} searchPlaceholder="Search alerts..." />
             </div>

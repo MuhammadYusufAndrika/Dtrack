@@ -18,7 +18,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
     @inertiaHead
 </head>
-<body class="antialiased bg-[#edf1f7] text-dark-600">
+<body class="antialiased text-dark-600">
     @inertia
     <script>
         if ('serviceWorker' in navigator) {
